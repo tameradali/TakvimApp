@@ -12,8 +12,13 @@
     <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet" />
     <!-- Materialize Template Core CSS -->
     <link rel="stylesheet" href="/materialize/core.css" />
-    <!-- React Big Calendar CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/react-big-calendar@1.13.5/lib/css/react-big-calendar.css" />
+    <!-- FullCalendar CSS override -->
+    <style>
+      .fc .fc-button { text-transform: capitalize; }
+      .fc .fc-toolbar-title { font-size: 1.1rem; font-weight: 600; }
+      .fc-event { cursor: pointer; border-radius: 4px; font-size: 0.8rem; }
+      .fc-daygrid-event { padding: 1px 4px; }
+    </style>
   </head>
   <body>
     <div id="root"></div>

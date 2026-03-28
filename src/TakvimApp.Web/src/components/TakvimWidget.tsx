@@ -1,10 +1,9 @@
-import { Calendar, momentLocalizer } from 'react-big-calendar'
-import moment from 'moment'
-import 'moment/locale/tr'
-import type { SlotInfo } from 'react-big-calendar'
-
-moment.locale('tr')
-const localizer = momentLocalizer(moment)
+import FullCalendar from '@fullcalendar/react'
+import dayGridPlugin from '@fullcalendar/daygrid'
+import timeGridPlugin from '@fullcalendar/timegrid'
+import listPlugin from '@fullcalendar/list'
+import interactionPlugin from '@fullcalendar/interaction'
+import type { EventClickArg, DatesSetArg, EventContentArg } from '@fullcalendar/core'
 
 export type EtkinlikTur = 'gerceklesen' | 'planlanan' | 'beklenen'
 
@@ -18,61 +17,109 @@ export interface TakvimEtkinlik {
   allDay?: boolean
 }
 
+interface FCEvent {
+  id: string
+  title: string
+  start: Date
+  end: Date
+  allDay: boolean
+  backgroundColor: string
+  borderColor: string
+  textColor: string
+  extendedProps: { originalId: number; tur: EtkinlikTur; gunlukFiyat?: number | null }
+}
+
+function etkinligiDonustur(e: TakvimEtkinlik): FCEvent[] {
+  const bugun = new Date()
+  bugun.setHours(0, 0, 0, 0)
+  const yarin = new Date(bugun)
+  yarin.setDate(yarin.getDate() + 1)
+
+  const base = {
+    allDay: true,
+    extendedProps: { originalId: e.id, tur: e.tur, gunlukFiyat: e.gunlukFiyat },
+  }
+
+  if (e.tur === 'beklenen') {
+    return [{ ...base, id: String(e.id) + '_b', title: e.title, start: e.start, end: e.end,
+      backgroundColor: '#f06292', borderColor: '#c2185b', textColor: '#fff' }]
+  }
+
+  const eStart = new Date(e.start); eStart.setHours(0, 0, 0, 0)
+  const eEnd   = new Date(e.end);   eEnd.setHours(0, 0, 0, 0)
+
+  // Tamamen geçmiş
+  if (eEnd < bugun) {
+    return [{ ...base, id: String(e.id) + '_g', title: e.title, start: e.start, end: e.end,
+      backgroundColor: '#4caf50', borderColor: '#388e3c', textColor: '#fff' }]
+  }
+  // Tamamen gelecek
+  if (eStart >= yarin) {
+    return [{ ...base, id: String(e.id) + '_p', title: e.title, start: e.start, end: e.end,
+      backgroundColor: '#ffb300', borderColor: '#f57f17', textColor: '#333' }]
+  }
+  // Bugünü kapsıyor — yeşil + sarı böl
+  const result: FCEvent[] = []
+  if (eStart < bugun) {
+    result.push({ ...base, id: String(e.id) + '_g', title: e.title, start: e.start, end: bugun,
+      backgroundColor: '#4caf50', borderColor: '#388e3c', textColor: '#fff' })
+  }
+  result.push({ ...base, id: String(e.id) + '_bg', title: e.title, start: bugun, end: bugun,
+    backgroundColor: '#4caf50', borderColor: '#388e3c', textColor: '#fff' })
+  if (eEnd >= yarin) {
+    result.push({ ...base, id: String(e.id) + '_p', title: e.title, start: yarin, end: e.end,
+      backgroundColor: '#ffb300', borderColor: '#f57f17', textColor: '#333' })
+  }
+  return result
+}
+
 interface TakvimWidgetProps {
   etkinlikler: TakvimEtkinlik[]
-  onNavigate?: (date: Date) => void
+  onDatesSet?: (start: Date, end: Date) => void
   onSelectEvent?: (event: TakvimEtkinlik) => void
-  onSelectSlot?: (slot: SlotInfo) => void
 }
 
-function eventPropGetter(event: TakvimEtkinlik, slotDate: Date) {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const slot = new Date(slotDate)
-  slot.setHours(0, 0, 0, 0)
+export function TakvimWidget({ etkinlikler, onDatesSet, onSelectEvent }: TakvimWidgetProps) {
+  const fcEvents: FCEvent[] = etkinlikler.flatMap(etkinligiDonustur)
 
-  if (event.tur === 'beklenen') {
-    return { style: { backgroundColor: '#f06292', borderColor: '#c2185b', color: '#fff' } }
+  function handleEventClick(arg: EventClickArg) {
+    if (!onSelectEvent) return
+    const props = arg.event.extendedProps as FCEvent['extendedProps']
+    const original = etkinlikler.find(e => e.id === props.originalId)
+    if (original) onSelectEvent(original)
   }
-  if (slot <= today) {
-    return { style: { backgroundColor: '#4caf50', borderColor: '#388e3c', color: '#fff' } }
+
+  function handleDatesSet(arg: DatesSetArg) {
+    if (onDatesSet) onDatesSet(arg.start, arg.end)
   }
-  return { style: { backgroundColor: '#ffb300', borderColor: '#f57f17', color: '#333' } }
-}
 
-const messages = {
-  today:     'Bugün',
-  previous:  '‹',
-  next:      '›',
-  month:     'Ay',
-  week:      'Hafta',
-  day:       'Gün',
-  agenda:    'Ajanda',
-  date:      'Tarih',
-  time:      'Saat',
-  event:     'Etkinlik',
-  noEventsInRange: 'Bu aralıkta etkinlik yok.',
-}
+  function renderEventContent(arg: EventContentArg) {
+    return (
+      <div style={{ overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', padding: '1px 3px' }}>
+        <span>{arg.event.title}</span>
+      </div>
+    )
+  }
 
-export function TakvimWidget({ etkinlikler, onNavigate, onSelectEvent, onSelectSlot }: TakvimWidgetProps) {
   return (
-    <div style={{ height: 680 }}>
-      <Calendar
-        localizer={localizer}
-        events={etkinlikler}
-        startAccessor="start"
-        endAccessor="end"
-        eventPropGetter={eventPropGetter as never}
-        onNavigate={onNavigate}
-        onSelectEvent={onSelectEvent as never}
-        onSelectSlot={onSelectSlot}
-        defaultView="month"
-        views={['month', 'week', 'day', 'agenda']}
-        selectable
-        messages={messages}
-        culture="tr"
-        style={{ height: '100%' }}
-      />
-    </div>
+    <FullCalendar
+      plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
+      initialView="dayGridMonth"
+      headerToolbar={{
+        left: 'prev,next today',
+        center: 'title',
+        right: 'dayGridMonth,timeGridWeek,timeGridDay,listMonth',
+      }}
+      buttonText={{ today: 'Bugün', month: 'Ay', week: 'Hafta', day: 'Gün', list: 'Liste' }}
+      locale="tr"
+      events={fcEvents as never}
+      eventClick={handleEventClick}
+      datesSet={handleDatesSet}
+      eventContent={renderEventContent}
+      height={680}
+      firstDay={1}
+      dayMaxEvents={3}
+      moreLinkText={(n) => `+${n} daha`}
+    />
   )
 }
