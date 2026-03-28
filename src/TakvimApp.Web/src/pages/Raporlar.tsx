@@ -367,7 +367,12 @@ export function Raporlar() {
                   </tr>
                 </thead>
                 <tbody>
-                  {raporlar.map((r, ri) => (
+                  {raporlar.filter(r =>
+                    r.toplamGun > 0 ||
+                    (planlananDahil ? (r.planlananToplamGun ?? 0) > 0 : false) ||
+                    (beklenenDahil  ? (r.beklenenToplamGun  ?? 0) > 0 : false) ||
+                    r.toplamGelir > 0
+                  ).map((r, ri) => (
                     <tr key={ri}>
                       <td style={{ position: 'sticky', left: 0, background: 'var(--bs-body-bg,#fff)', zIndex: 1 }}>
                         <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2,

@@ -76,14 +76,22 @@ export function Takvim() {
 
   // Gün sayısı hesapla — yıllık veriden
   const bugun = new Date(); bugun.setHours(0, 0, 0, 0)
+
+  // Timed eventlar için exclusive bitiş: aynı gün 09:00-17:00 → ertesi gün midnight
+  function exclusiveEnd(rawEnd: Date): Date {
+    if (rawEnd.getHours() !== 0 || rawEnd.getMinutes() !== 0)
+      return new Date(rawEnd.getFullYear(), rawEnd.getMonth(), rawEnd.getDate() + 1)
+    const d = new Date(rawEnd); d.setHours(0, 0, 0, 0); return d
+  }
+
   const gunSayilari = yillikEtkinlikler.reduce(
     (acc, e) => {
       const s  = new Date(e.start); s.setHours(0, 0, 0, 0)
-      const en = new Date(e.end);   en.setHours(0, 0, 0, 0)
+      const en = exclusiveEnd(new Date(e.end))
       if (e.tur === 'beklenen') {
-        acc.beklenen += e.beklenenGunSayisi ?? etkinlikGunSayisi(s, en)
+        acc.beklenen += e.beklenenGunSayisi ?? Math.max(0, Math.round((en.getTime() - s.getTime()) / 86400000))
       } else if (e.etkinlikTuru === 'Toplanti') {
-        acc.toplanti += etkinlikGunSayisi(s, en)
+        acc.toplanti += Math.max(0, Math.round((en.getTime() - s.getTime()) / 86400000))
       } else {
         const pastEnd     = en   < bugun ? en   : bugun
         const futureStart = s    > bugun ? s    : bugun
