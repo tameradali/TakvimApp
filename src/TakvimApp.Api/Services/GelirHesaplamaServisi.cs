@@ -58,9 +58,15 @@ public class GelirHesaplamaServisi
             if (e.GunlukFiyat is null || e.GunlukFiyat <= 0) continue;
             if (e.EtkinlikTuru == "Toplanti") continue;
 
+            // Exclusive bitiş: all-day eventlar midnight sonraki gün saklar (zaten exclusive).
+            // Timed eventlar (09:00-17:00 gibi) .Date alınca aynı gün → +1 gün ekle.
+            var bitisExclusive = e.BitisTarihi.TimeOfDay == TimeSpan.Zero
+                ? e.BitisTarihi.Date
+                : e.BitisTarihi.Date.AddDays(1);
+
             // Gerçekleşen (tamamlanan) günler
             var effStart = e.BaslangicTarihi.Date > ayBaslangici ? e.BaslangicTarihi.Date : ayBaslangici;
-            var effEnd   = e.BitisTarihi.Date < ayBitisi.AddDays(1) ? e.BitisTarihi.Date : ayBitisi.AddDays(1);
+            var effEnd   = bitisExclusive < ayBitisi.AddDays(1) ? bitisExclusive : ayBitisi.AddDays(1);
             effEnd       = effEnd <= bugun ? effEnd : bugun.AddDays(1);
 
             if (effEnd > effStart)
@@ -76,7 +82,7 @@ public class GelirHesaplamaServisi
             // Planlanan (gelecek) günler
             var plStart = e.BaslangicTarihi.Date > ayBaslangici ? e.BaslangicTarihi.Date : ayBaslangici;
             if (plStart < yarin) plStart = yarin;
-            var plEnd = e.BitisTarihi.Date < ayBitisi.AddDays(1) ? e.BitisTarihi.Date : ayBitisi.AddDays(1);
+            var plEnd = bitisExclusive < ayBitisi.AddDays(1) ? bitisExclusive : ayBitisi.AddDays(1);
 
             if (plEnd > plStart)
             {
