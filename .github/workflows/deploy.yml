@@ -74,6 +74,10 @@ jobs:
           port: 2222
           script: |
             mkdir -p /home/tamer/takvim
+            cat > /home/tamer/takvim/.env << ENVEOF
+CF_TUNNEL_TOKEN=${{ secrets.CF_TUNNEL_TOKEN }}
+JWT_SECRET=${{ secrets.JWT_SECRET }}
+ENVEOF
             cat > /home/tamer/takvim/docker-compose.yml << 'COMPOSEEOF'
             services:
 
