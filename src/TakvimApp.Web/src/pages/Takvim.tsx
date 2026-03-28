@@ -76,6 +76,8 @@ export function Takvim() {
 
   // Gün sayısı hesapla — yıllık veriden
   const bugun = new Date(); bugun.setHours(0, 0, 0, 0)
+  // Backend ile senkron: bugün gerçekleşen, yarından itibaren planlanan
+  const yarin = new Date(bugun); yarin.setDate(yarin.getDate() + 1)
 
   // Timed eventlar için exclusive bitiş: aynı gün 09:00-17:00 → ertesi gün midnight
   function exclusiveEnd(rawEnd: Date): Date {
@@ -93,8 +95,8 @@ export function Takvim() {
       } else if (e.etkinlikTuru === 'Toplanti') {
         acc.toplanti += Math.max(0, Math.round((en.getTime() - s.getTime()) / 86400000))
       } else {
-        const pastEnd     = en   < bugun ? en   : bugun
-        const futureStart = s    > bugun ? s    : bugun
+        const pastEnd     = en   < yarin ? en   : yarin   // bugün dahil gerçekleşen
+        const futureStart = s    > yarin ? s    : yarin   // yarından itibaren planlanan
         acc.gerceklesen  += Math.max(0, Math.round((pastEnd.getTime()    - s.getTime())          / 86400000))
         acc.planlanan    += Math.max(0, Math.round((en.getTime()         - futureStart.getTime()) / 86400000))
       }
