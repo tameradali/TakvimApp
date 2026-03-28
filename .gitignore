@@ -1,0 +1,39 @@
+# Build outputs
+bin/
+obj/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Rider
+.idea/
+
+# Sensitive / local config — NEVER commit these
+pg_connection.txt
+api_url.txt
+*_apikey.txt
+appsettings.Production.json
+appsettings.Local.json
+*service_account*.json
+*credentials*.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# NuGet
+*.nupkg
+.nuget/
+
+# Publish output
+publish/
+
+# Node / Frontend
+node_modules/
+dist/
+.env
+.env.local

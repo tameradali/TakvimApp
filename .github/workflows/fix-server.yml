@@ -1,0 +1,23 @@
+name: Fix Server
+
+on:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: 'Sunucuda çalıştırılacak komut'
+        required: false
+        default: 'docker compose -f /home/tamer/takvim/docker-compose.yml up -d'
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run command on server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HETZNER_HOST }}
+          username: ${{ secrets.HETZNER_USER }}
+          key: ${{ secrets.HETZNER_SSH_KEY }}
+          port: 2222
+          script: |
+            ${{ github.event.inputs.command }}

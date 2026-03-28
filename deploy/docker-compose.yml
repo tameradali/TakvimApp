@@ -1,0 +1,59 @@
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: takvim-postgres
+    environment:
+      POSTGRES_PASSWORD: "1"
+      POSTGRES_DB: TakvimApp
+      POSTGRES_USER: tamer
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks: [internal]
+    restart: unless-stopped
+    mem_limit: 256m
+    command: >
+      postgres
+      -c shared_buffers=64MB
+      -c work_mem=4MB
+      -c max_connections=30
+
+  api:
+    image: ghcr.io/tameradali/takvimapp-api:latest
+    container_name: takvimapp-api
+    environment:
+      PG_CONNECTION_STRING: "Host=takvim-postgres;Database=TakvimApp;Username=tamer;Password=1"
+      JWT_SECRET: ${JWT_SECRET:-TakvimAppJwtSecret2026_PleaseChangeMe}
+      DOTNET_GCConserveMemory: "9"
+      DOTNET_GCHeapHardLimit: "314572800"
+    networks: [internal]
+    depends_on: [postgres]
+    restart: unless-stopped
+    mem_limit: 512m
+    mem_reservation: 256m
+
+  web:
+    image: ghcr.io/tameradali/takvimapp-web:latest
+    container_name: takvimapp-web
+    networks: [internal]
+    depends_on: [api]
+    restart: unless-stopped
+    mem_limit: 128m
+    mem_reservation: 64m
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: takvim-cloudflared
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CF_TUNNEL_TOKEN:-}
+    networks: [internal]
+    restart: unless-stopped
+    mem_limit: 64m
+
+networks:
+  internal:
+    driver: bridge
+
+volumes:
+  pgdata:

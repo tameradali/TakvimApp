@@ -1,0 +1,142 @@
+name: Build & Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  API_IMAGE: ${{ github.repository_owner }}/takvimapp-api
+  WEB_IMAGE: ${{ github.repository_owner }}/takvimapp-web
+
+jobs:
+  build-api:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push API image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.API_IMAGE }}:latest
+            ${{ env.REGISTRY }}/${{ env.API_IMAGE }}:${{ github.sha }}
+
+  build-web:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Web image
+        uses: docker/build-push-action@v5
+        with:
+          context: src/TakvimApp.Web
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.WEB_IMAGE }}:latest
+            ${{ env.REGISTRY }}/${{ env.WEB_IMAGE }}:${{ github.sha }}
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [build-api, build-web]
+    steps:
+      - name: Deploy to Hetzner
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HETZNER_HOST }}
+          username: ${{ secrets.HETZNER_USER }}
+          key: ${{ secrets.HETZNER_SSH_KEY }}
+          port: 2222
+          script: |
+            mkdir -p /home/tamer/takvim
+            cat > /home/tamer/takvim/docker-compose.yml << 'COMPOSEEOF'
+            services:
+
+              postgres:
+                image: postgres:16-alpine
+                container_name: takvim-postgres
+                environment:
+                  POSTGRES_PASSWORD: "1"
+                  POSTGRES_DB: TakvimApp
+                  POSTGRES_USER: tamer
+                volumes:
+                  - pgdata:/var/lib/postgresql/data
+                networks: [internal]
+                restart: unless-stopped
+                mem_limit: 256m
+                command: >
+                  postgres
+                  -c shared_buffers=64MB
+                  -c work_mem=4MB
+                  -c max_connections=30
+
+              api:
+                image: ghcr.io/tameradali/takvimapp-api:latest
+                container_name: takvimapp-api
+                environment:
+                  PG_CONNECTION_STRING: "Host=takvim-postgres;Database=TakvimApp;Username=tamer;Password=1"
+                  JWT_SECRET: ${JWT_SECRET:-TakvimAppJwtSecret2026_PleaseChangeMe}
+                  DOTNET_GCConserveMemory: "9"
+                  DOTNET_GCHeapHardLimit: "314572800"
+                networks: [internal]
+                depends_on: [postgres]
+                restart: unless-stopped
+                mem_limit: 512m
+                mem_reservation: 256m
+
+              web:
+                image: ghcr.io/tameradali/takvimapp-web:latest
+                container_name: takvimapp-web
+                networks: [internal]
+                depends_on: [api]
+                restart: unless-stopped
+                mem_limit: 128m
+                mem_reservation: 64m
+
+              cloudflared:
+                image: cloudflare/cloudflared:latest
+                container_name: takvim-cloudflared
+                command: tunnel --no-autoupdate run
+                environment:
+                  TUNNEL_TOKEN: ${CF_TUNNEL_TOKEN:-}
+                networks: [internal]
+                restart: unless-stopped
+                mem_limit: 64m
+
+            networks:
+              internal:
+                driver: bridge
+
+            volumes:
+              pgdata:
+            COMPOSEEOF
+            cd /home/tamer/takvim
+            echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            docker compose pull api web
+            docker compose up -d
+            docker image prune -f

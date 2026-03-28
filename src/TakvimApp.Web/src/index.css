@@ -1,0 +1,87 @@
+/* ═══════════════════════════════════════════════════════════════
+   TakvimApp — Minimal overrides on top of Materialize template
+   ═══════════════════════════════════════════════════════════════ */
+
+html {
+  font-size: 14px !important;
+}
+
+:root {
+  --bs-heading-color: #3d4a5c;
+  --bs-body-color: #566a7f;
+  --bs-secondary-color: #8592a3;
+}
+
+select,
+input[type="text"],
+input[type="number"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+textarea,
+.form-control,
+.form-select {
+  color: #566a7f !important;
+  background-color: #fff !important;
+  border-color: rgba(86, 106, 127, 0.2) !important;
+}
+.form-control:focus,
+.form-select:focus {
+  color: #566a7f !important;
+  background-color: #fff !important;
+}
+.form-control::placeholder { color: #b4bdc6 !important; }
+.form-select option         { color: #566a7f; background: #fff; }
+.input-group-text           { color: #566a7f !important; background-color: #f5f5f9 !important; }
+
+.btn-outline-secondary { color: #566a7f  !important; border-color: rgba(86,106,127,.5) !important; }
+.btn-outline-primary   { color: #696cff  !important; }
+.btn-outline-danger    { color: #ff3e1d  !important; }
+.btn-outline-success   { color: #28a745  !important; }
+.btn-outline-warning   { color: #ffc107  !important; }
+
+.form-label, label { color: #566a7f !important; }
+.card-body, .card-header, .card-footer { color: #566a7f; }
+.modal-content { color: #566a7f; }
+.modal-title   { color: #3d3d4e; }
+.table, .table th, .table td { color: #566a7f !important; }
+
+/* ── React Big Calendar custom renk sınıfları ── */
+.rbc-event.gerceklesen { background-color: #4caf50 !important; border-color: #388e3c !important; }
+.rbc-event.planlanan   { background-color: #ffb300 !important; border-color: #f57f17 !important; color: #333 !important; }
+.rbc-event.beklenen    { background-color: #f06292 !important; border-color: #c2185b !important; }
+
+/* RBC genel düzeltmeler */
+.rbc-calendar { font-family: 'Inter', sans-serif; }
+.rbc-toolbar button { color: #566a7f; }
+.rbc-header { color: #3d4a5c; font-weight: 600; }
+
+/* ── Dark mode ── */
+html.dark {
+  --bs-body-bg: #25293c;
+  --bs-body-color: #cfd3ec;
+  --bs-heading-color: #cfd3ec;
+  --bs-secondary-color: #8692a4;
+  --bs-card-bg: #2f3349;
+  --bs-border-color: rgba(207,211,236,.12);
+}
+html.dark select,
+html.dark input[type="text"],
+html.dark input[type="number"],
+html.dark input[type="email"],
+html.dark input[type="password"],
+html.dark textarea,
+html.dark .form-control,
+html.dark .form-select {
+  color: #cfd3ec !important;
+  background-color: #2f3349 !important;
+  border-color: rgba(207,211,236,.12) !important;
+}
+html.dark .input-group-text { color: #cfd3ec !important; background-color: #3a3f5c !important; }
+html.dark .form-label, html.dark label { color: #cfd3ec !important; }
+html.dark .table, html.dark .table th, html.dark .table td { color: #cfd3ec !important; }
+html.dark .rbc-toolbar button { color: #cfd3ec; }
+html.dark .rbc-header { color: #cfd3ec; }
+html.dark .rbc-month-view, html.dark .rbc-time-view { background: #2f3349; border-color: rgba(207,211,236,.12); }
+html.dark .rbc-day-bg { background: #2f3349; }
+html.dark .rbc-off-range-bg { background: #25293c; }
