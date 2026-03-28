@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { TakvimWidget, TakvimEtkinlik } from '../components/TakvimWidget'
 import { getEgitimEtkinlikleriAralik, getBeklenenEgitimlerAralik, senkronizeTumu, patchEtkinlikFiyat } from '../api/client'
 import type { EgitimEtkinligi, BeklenenEgitim } from '../api/client'
@@ -70,6 +70,7 @@ export function Takvim() {
   const [loading, setLoading]         = useState(false)
   const [senkronLoading, setSenkronLoading] = useState(false)
   const [hata, setHata]               = useState<string | null>(null)
+  const sonYuklenenAralik = useRef<string>('')
   const [seciliEtkinlik, setSeciliEtkinlik] = useState<TakvimEtkinlik | null>(null)
   const [fiyatInput, setFiyatInput]   = useState('')
   const [fiyatKayitLoading, setFiyatKayitLoading] = useState(false)
@@ -110,11 +111,8 @@ export function Takvim() {
     }
   }, [])
 
-  useEffect(() => {
-    const bs = new Date(aktifTarih.getFullYear(), aktifTarih.getMonth(), 1)
-    const bt = new Date(aktifTarih.getFullYear(), aktifTarih.getMonth() + 1, 0, 23, 59, 59)
-    yukle(bs, bt)
-  }, [aktifTarih, yukle])
+  // İlk yükleme — FullCalendar datesSet ile tetikleyecek
+  useEffect(() => { /* no-op */ }, [])
 
   async function handleSenkron() {
     setSenkronLoading(true)
@@ -210,7 +208,12 @@ export function Takvim() {
               ) : (
                 <TakvimWidget
                   etkinlikler={etkinlikler}
-                  onDatesSet={(start, end) => yukle(start, end)}
+                  onDatesSet={(start, end) => {
+                    const key = start.toISOString() + end.toISOString()
+                    if (sonYuklenenAralik.current === key) return
+                    sonYuklenenAralik.current = key
+                    yukle(start, end)
+                  }}
                   onSelectEvent={(evt) => {
                     setSeciliEtkinlik(evt)
                     setFiyatInput(evt.gunlukFiyat ? String(evt.gunlukFiyat) : '')
