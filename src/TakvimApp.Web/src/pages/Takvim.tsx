@@ -201,11 +201,12 @@ export function Takvim() {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div className="card">
             <div className="card-body">
-              {loading ? (
-                <div className="text-center py-5">
-                  <span className="spinner-border text-primary" />
-                </div>
-              ) : (
+              <div style={{ position: 'relative' }}>
+                {loading && (
+                  <div style={{ position: 'absolute', inset: 0, background: 'rgba(255,255,255,0.6)', zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 8 }}>
+                    <span className="spinner-border text-primary" />
+                  </div>
+                )}
                 <TakvimWidget
                   etkinlikler={etkinlikler}
                   onDatesSet={(start, end) => {
@@ -219,7 +220,7 @@ export function Takvim() {
                     setFiyatInput(evt.gunlukFiyat ? String(evt.gunlukFiyat) : '')
                   }}
                 />
-              )}
+              </div>
             </div>
           </div>
         </div>
