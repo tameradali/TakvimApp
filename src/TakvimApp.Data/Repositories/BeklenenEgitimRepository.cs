@@ -31,7 +31,7 @@ public class BeklenenEgitimRepository(VeritabaniYonetici db, AktifKullaniciServi
     {
         using var baglanti = db.BaglantiAc();
         using var komut    = baglanti.CreateCommand();
-        komut.CommandText  = SelectSql + " WHERE KullaniciId = @kid ORDER BY BaslangicTarihi";
+        komut.CommandText  = SelectSql + " WHERE b.KullaniciId = @kid ORDER BY b.BaslangicTarihi";
         komut.Parameters.AddWithValue("@kid", kullaniciId);
         using var r  = await komut.ExecuteReaderAsync();
         var liste    = new List<BeklenenEgitim>();
@@ -44,10 +44,10 @@ public class BeklenenEgitimRepository(VeritabaniYonetici db, AktifKullaniciServi
         using var baglanti = db.BaglantiAc();
         using var komut    = baglanti.CreateCommand();
         komut.CommandText  = SelectSql + @"
-            WHERE KullaniciId = @kid
-              AND BaslangicTarihi <= @bitis
-              AND BitisTarihi    >= @baslangic
-            ORDER BY BaslangicTarihi";
+            WHERE b.KullaniciId    = @kid
+              AND b.BaslangicTarihi <= @bitis
+              AND b.BitisTarihi    >= @baslangic
+            ORDER BY b.BaslangicTarihi";
         komut.Parameters.AddWithValue("@kid",      kullaniciId);
         komut.Parameters.AddWithValue("@baslangic", baslangic);
         komut.Parameters.AddWithValue("@bitis",     bitis);
@@ -61,7 +61,7 @@ public class BeklenenEgitimRepository(VeritabaniYonetici db, AktifKullaniciServi
     {
         using var baglanti = db.BaglantiAc();
         using var komut    = baglanti.CreateCommand();
-        komut.CommandText  = SelectSql + " WHERE Id = @id AND KullaniciId = @kid";
+        komut.CommandText  = SelectSql + " WHERE b.Id = @id AND b.KullaniciId = @kid";
         komut.Parameters.AddWithValue("@id",  id);
         komut.Parameters.AddWithValue("@kid", kullanici.KullaniciId);
         using var r = await komut.ExecuteReaderAsync();
