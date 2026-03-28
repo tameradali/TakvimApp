@@ -79,6 +79,8 @@ export interface EtkinlikGelirKalemi {
   gunlukFiyat: number
   masraf: number
   toplamGelir: number
+  kurumId?: number | null
+  kurumAdi?: string | null
 }
 
 export interface BeklenenGelirKalemi {
@@ -230,6 +232,27 @@ export async function getAylikGelir(ay: number, yil: number): Promise<AylikGelir
 export async function getYillikGelir(yil: number): Promise<AylikGelir[]> {
   const r = await apiFetch(`/api/gelir/yillik?yil=${yil}`)
   if (!r.ok) throw new Error('Yıllık gelir alınamadı')
+  return r.json()
+}
+
+// ── Raporlar ──────────────────────────────────────────────────────────────────
+export interface KurumAyDetay {
+  ay: number
+  gunSayisi: number
+  toplamGelir: number
+}
+
+export interface KurumYillikRapor {
+  kurumId: number | null
+  kurumAdi: string
+  toplamGun: number
+  toplamGelir: number
+  aylar: KurumAyDetay[]
+}
+
+export async function getKurumBazliRapor(yil: number): Promise<KurumYillikRapor[]> {
+  const r = await apiFetch(`/api/gelir/kurum-bazli?yil=${yil}`)
+  if (!r.ok) throw new Error('Rapor alınamadı')
   return r.json()
 }
 
