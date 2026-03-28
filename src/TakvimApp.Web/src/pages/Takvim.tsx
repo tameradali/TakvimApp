@@ -210,11 +210,7 @@ export function Takvim() {
               ) : (
                 <TakvimWidget
                   etkinlikler={etkinlikler}
-                  onDatesSet={(start, end) => {
-                    const mid = new Date((start.getTime() + end.getTime()) / 2)
-                    setAktifTarih(mid)
-                    yukle(start, end)
-                  }}
+                  onDatesSet={(start, end) => yukle(start, end)}
                   onSelectEvent={(evt) => {
                     setSeciliEtkinlik(evt)
                     setFiyatInput(evt.gunlukFiyat ? String(evt.gunlukFiyat) : '')
