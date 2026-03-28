@@ -44,7 +44,9 @@ export function Raporlar() {
   }).filter(Boolean) as { name: string; value: number; fill: string }[]
 
   const gelirPie = raporlar.map((r, i) => {
-    const g = r.toplamGelir + (beklenenDahil ? (r.beklenenToplamGelir ?? 0) : 0)
+    const g = r.toplamGelir
+      + (planlananDahil ? (r.planlananToplamGelir ?? 0) : 0)
+      + (beklenenDahil  ? (r.beklenenToplamGelir  ?? 0) : 0)
     return g > 0 ? { name: r.kurumAdi, value: Number(g), fill: getRenk(r, i) } : null
   }).filter(Boolean) as { name: string; value: number; fill: string }[]
 
