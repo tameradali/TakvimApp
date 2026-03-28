@@ -68,7 +68,8 @@ export function BeklenenEgitimler() {
     e.preventDefault()
     setKayitLoading(true)
     try {
-      const dt = new Date(parseInt(form.yil), 0, 1)
+      // UTC noon kullanarak timezone kaymasını önle (UTC+3 bölgelerinde Jan 1 local = Dec 31 UTC olmaz)
+      const dt = new Date(Date.UTC(parseInt(form.yil), 0, 1, 12, 0, 0))
       const dto = {
         baslik:            form.baslik,
         baslangicTarihi:   dt.toISOString(),

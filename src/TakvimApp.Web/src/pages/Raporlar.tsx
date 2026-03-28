@@ -29,11 +29,12 @@ export function Raporlar() {
 
   const yillar = [bugun.getFullYear() - 1, bugun.getFullYear(), bugun.getFullYear() + 1]
 
-  const toplamGun           = raporlar.reduce((s, r) => s + r.toplamGun, 0)
-  const toplamGelir         = raporlar.reduce((s, r) => s + r.toplamGelir, 0)
-  const planlananToplamGun  = raporlar.reduce((s, r) => s + (r.planlananToplamGun ?? 0), 0)
-  const beklenenToplamGun   = raporlar.reduce((s, r) => s + (r.beklenenToplamGun ?? 0), 0)
-  const beklenenToplamGelir = raporlar.reduce((s, r) => s + (r.beklenenToplamGelir ?? 0), 0)
+  const toplamGun              = raporlar.reduce((s, r) => s + r.toplamGun, 0)
+  const toplamGelir            = raporlar.reduce((s, r) => s + r.toplamGelir, 0)
+  const planlananToplamGun     = raporlar.reduce((s, r) => s + (r.planlananToplamGun ?? 0), 0)
+  const planlananToplamGelir   = raporlar.reduce((s, r) => s + (r.planlananToplamGelir ?? 0), 0)
+  const beklenenToplamGun      = raporlar.reduce((s, r) => s + (r.beklenenToplamGun ?? 0), 0)
+  const beklenenToplamGelir    = raporlar.reduce((s, r) => s + (r.beklenenToplamGelir ?? 0), 0)
 
   const gunPie = raporlar.map((r, i) => {
     const g = r.toplamGun
@@ -53,7 +54,7 @@ export function Raporlar() {
       'Kurum',
       ...AYLAR.map(a => `${a} Gün`),
       'Toplam Gün',
-      ...(planlananDahil ? ['Planlanan Gün'] : []),
+      ...(planlananDahil ? ['Planlanan Gün', 'Planlanan Gelir'] : []),
       ...(beklenenDahil  ? ['Beklenen Gün', 'Beklenen Gelir'] : []),
       'Toplam Gelir',
     ]
@@ -61,7 +62,7 @@ export function Raporlar() {
       r.kurumAdi,
       ...r.aylar.map(a => String(a.gunSayisi)),
       String(r.toplamGun),
-      ...(planlananDahil ? [String(r.planlananToplamGun ?? 0)] : []),
+      ...(planlananDahil ? [String(r.planlananToplamGun ?? 0), fmtTl(r.planlananToplamGelir ?? 0)] : []),
       ...(beklenenDahil  ? [String(r.beklenenToplamGun ?? 0), fmtTl(r.beklenenToplamGelir ?? 0)] : []),
       fmtTl(r.toplamGelir),
     ])
@@ -69,7 +70,7 @@ export function Raporlar() {
       'Toplam',
       ...AYLAR.map((_, i) => String(raporlar.reduce((s, r) => s + (r.aylar[i]?.gunSayisi ?? 0), 0))),
       String(toplamGun),
-      ...(planlananDahil ? [String(planlananToplamGun)] : []),
+      ...(planlananDahil ? [String(planlananToplamGun), fmtTl(planlananToplamGelir)] : []),
       ...(beklenenDahil  ? [String(beklenenToplamGun), fmtTl(beklenenToplamGelir)] : []),
       fmtTl(toplamGelir),
     ]
@@ -85,7 +86,7 @@ export function Raporlar() {
 
   // ── PDF export (yeni pencere + print) ───────────────────────────────────────
   function exportPDF() {
-    const plH = planlananDahil ? '<th>Planlanan</th>' : ''
+    const plH = planlananDahil ? '<th>Plan.Gün</th><th>Plan.Gelir</th>' : ''
     const bkH = beklenenDahil  ? '<th>Beklenen Gün</th><th>Beklenen Gelir</th>' : ''
 
     const tableRows = raporlar.map(r => `
@@ -93,7 +94,7 @@ export function Raporlar() {
         <td><b>${r.kurumAdi}</b></td>
         ${r.aylar.map(a => `<td>${a.gunSayisi > 0 ? a.gunSayisi + 'g' : '—'}</td>`).join('')}
         <td style="color:#4caf50"><b>${fmt(r.toplamGun)}</b></td>
-        ${planlananDahil ? `<td style="color:#ffb300"><b>${fmt(r.planlananToplamGun ?? 0)}</b></td>` : ''}
+        ${planlananDahil ? `<td style="color:#ffb300"><b>${fmt(r.planlananToplamGun ?? 0)}</b></td><td style="color:#ffb300">${fmtTl(r.planlananToplamGelir ?? 0)} ₺</td>` : ''}
         ${beklenenDahil  ? `<td style="color:#f06292"><b>${fmt(r.beklenenToplamGun ?? 0)}</b></td><td style="color:#f06292">${fmtTl(r.beklenenToplamGelir ?? 0)} ₺</td>` : ''}
         <td style="color:#696cff"><b>${fmtTl(r.toplamGelir)} ₺</b></td>
       </tr>`).join('')
@@ -121,7 +122,7 @@ export function Raporlar() {
     <td>Toplam</td>
     ${AYLAR.map((_, i) => `<td>${raporlar.reduce((s, r) => s + (r.aylar[i]?.gunSayisi ?? 0), 0)}g</td>`).join('')}
     <td>${fmt(toplamGun)}</td>
-    ${planlananDahil ? `<td>${fmt(planlananToplamGun)}</td>` : ''}
+    ${planlananDahil ? `<td>${fmt(planlananToplamGun)}</td><td>${fmtTl(planlananToplamGelir)} ₺</td>` : ''}
     ${beklenenDahil  ? `<td>${fmt(beklenenToplamGun)}</td><td>${fmtTl(beklenenToplamGelir)} ₺</td>` : ''}
     <td>${fmtTl(toplamGelir)} ₺</td>
   </tr></tfoot>
@@ -354,6 +355,7 @@ export function Raporlar() {
                     {planlananDahil && <th className="text-end" style={{ minWidth: 56, color: '#ffb300' }}>Plan.</th>}
                     {beklenenDahil  && <th className="text-end" style={{ minWidth: 56, color: '#f06292' }}>Bekl.</th>}
                     <th className="text-end" style={{ minWidth: 105 }}>Gelir</th>
+                    {planlananDahil && <th className="text-end" style={{ minWidth: 105, color: '#ffb300' }}>Plan.Gelir</th>}
                     {beklenenDahil  && <th className="text-end" style={{ minWidth: 105, color: '#f06292' }}>Bek.Gelir</th>}
                   </tr>
                 </thead>
@@ -377,7 +379,13 @@ export function Raporlar() {
                                   {g > 0 && p > 0 && <span className="text-muted" style={{ fontSize: '0.6rem', margin: '0 1px' }}>+</span>}
                                   {p > 0 && <span style={{ color: '#ffb300', fontWeight: 600 }}>{p}p</span>}
                                 </span>
-                                {g > 0 && <span className="d-block text-muted" style={{ fontSize: '0.67rem' }}>{fmt(a.toplamGelir)}₺</span>}
+                                {(g > 0 || p > 0) && (
+                                <span className="d-block text-muted" style={{ fontSize: '0.67rem' }}>
+                                  {g > 0 && <span style={{ color: '#4caf50' }}>{fmt(a.toplamGelir)}₺</span>}
+                                  {g > 0 && p > 0 && <span className="text-muted"> </span>}
+                                  {p > 0 && <span style={{ color: '#ffb300' }}>{fmt(a.planlananGelir ?? 0)}₺</span>}
+                                </span>
+                              )}
                               </>
                             ) : <span className="text-muted">—</span>}
                           </td>
@@ -387,6 +395,7 @@ export function Raporlar() {
                       {planlananDahil && <td className="text-end fw-bold" style={{ color: '#ffb300' }}>{fmt(r.planlananToplamGun ?? 0)}</td>}
                       {beklenenDahil  && <td className="text-end fw-bold" style={{ color: '#f06292' }}>{fmt(r.beklenenToplamGun ?? 0)}</td>}
                       <td className="text-end fw-bold" style={{ color: '#696cff' }}>{fmtTl(r.toplamGelir)} ₺</td>
+                      {planlananDahil && <td className="text-end" style={{ color: '#ffb300' }}>{fmtTl(r.planlananToplamGelir ?? 0)} ₺</td>}
                       {beklenenDahil  && <td className="text-end" style={{ color: '#f06292' }}>{fmtTl(r.beklenenToplamGelir ?? 0)} ₺</td>}
                     </tr>
                   ))}
@@ -395,9 +404,10 @@ export function Raporlar() {
                   <tr className="table-light fw-bold">
                     <td style={{ position: 'sticky', left: 0, background: 'inherit', zIndex: 1 }}>Toplam</td>
                     {AYLAR.map((_, i) => {
-                      const g = raporlar.reduce((s, r) => s + (r.aylar[i]?.gunSayisi ?? 0), 0)
-                      const p = planlananDahil ? raporlar.reduce((s, r) => s + (r.aylar[i]?.planlananGun ?? 0), 0) : 0
-                      const t = raporlar.reduce((s, r) => s + (r.aylar[i]?.toplamGelir ?? 0), 0)
+                      const g  = raporlar.reduce((s, r) => s + (r.aylar[i]?.gunSayisi ?? 0), 0)
+                      const p  = planlananDahil ? raporlar.reduce((s, r) => s + (r.aylar[i]?.planlananGun ?? 0), 0) : 0
+                      const t  = raporlar.reduce((s, r) => s + (r.aylar[i]?.toplamGelir ?? 0), 0)
+                      const tp = planlananDahil ? raporlar.reduce((s, r) => s + (r.aylar[i]?.planlananGelir ?? 0), 0) : 0
                       return (
                         <td key={i} className="text-center">
                           {g > 0 || p > 0 ? (
@@ -407,7 +417,13 @@ export function Raporlar() {
                                 {g > 0 && p > 0 && <span className="text-muted" style={{ fontSize: '0.6rem', margin: '0 1px' }}>+</span>}
                                 {p > 0 && <span style={{ color: '#ffb300' }}>{p}p</span>}
                               </span>
-                              {g > 0 && <span className="d-block text-muted" style={{ fontSize: '0.67rem' }}>{fmt(t)}₺</span>}
+                              {(g > 0 || p > 0) && (
+                                <span className="d-block text-muted" style={{ fontSize: '0.67rem' }}>
+                                  {g > 0 && <span style={{ color: '#4caf50' }}>{fmt(t)}₺</span>}
+                                  {g > 0 && p > 0 && ' '}
+                                  {p > 0 && <span style={{ color: '#ffb300' }}>{fmt(tp)}₺</span>}
+                                </span>
+                              )}
                             </>
                           ) : <span className="text-muted">—</span>}
                         </td>
@@ -417,6 +433,7 @@ export function Raporlar() {
                     {planlananDahil && <td className="text-end" style={{ color: '#ffb300' }}>{fmt(planlananToplamGun)}</td>}
                     {beklenenDahil  && <td className="text-end" style={{ color: '#f06292' }}>{fmt(beklenenToplamGun)}</td>}
                     <td className="text-end" style={{ color: '#696cff' }}>{fmtTl(toplamGelir)} ₺</td>
+                    {planlananDahil && <td className="text-end" style={{ color: '#ffb300' }}>{fmtTl(planlananToplamGelir)} ₺</td>}
                     {beklenenDahil  && <td className="text-end" style={{ color: '#f06292' }}>{fmtTl(beklenenToplamGelir)} ₺</td>}
                   </tr>
                 </tfoot>

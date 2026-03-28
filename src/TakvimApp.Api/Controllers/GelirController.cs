@@ -26,9 +26,8 @@ public class GelirController(
         var ayBitisi     = ayBaslangici.AddMonths(1).AddDays(-1);
 
         var etkinlikler = await etkinlikRepo.AralikGetirAsync(aktifKullanici.KullaniciId, ayBaslangici, ayBitisi);
-        var beklenenler = await beklenenRepo.AralikGetirAsync(aktifKullanici.KullaniciId, ayBaslangici, ayBitisi);
-
-        var sonuc = gelirServisi.HesaplaAylik(ay, yil, etkinlikler, beklenenler);
+        // Beklenenler yıl bazlı — boş liste gönder, Gelir.tsx direkt API çağırıyor
+        var sonuc = gelirServisi.HesaplaAylik(ay, yil, etkinlikler, new List<BeklenenEgitim>());
         return Ok(sonuc);
     }
 
@@ -43,9 +42,7 @@ public class GelirController(
             var ayBitisi     = ayBaslangici.AddMonths(1).AddDays(-1);
 
             var etkinlikler = await etkinlikRepo.AralikGetirAsync(aktifKullanici.KullaniciId, ayBaslangici, ayBitisi);
-            var beklenenler = await beklenenRepo.AralikGetirAsync(aktifKullanici.KullaniciId, ayBaslangici, ayBitisi);
-
-            sonuclar.Add(gelirServisi.HesaplaAylik(ay, yil, etkinlikler, beklenenler));
+            sonuclar.Add(gelirServisi.HesaplaAylik(ay, yil, etkinlikler, new List<BeklenenEgitim>()));
         }
 
         return Ok(sonuclar);
@@ -55,7 +52,6 @@ public class GelirController(
     public async Task<IActionResult> KurumBazliRapor([FromQuery] int yil)
     {
         var dict  = new Dictionary<string, KurumData>();
-        var bos   = new List<BeklenenEgitim>();
         var bugun = DateTime.UtcNow.Date;
         var yarin = bugun.AddDays(1);
 
@@ -69,7 +65,7 @@ public class GelirController(
             var ayBaslangici = new DateTime(yil, ay, 1);
             var ayBitisi     = ayBaslangici.AddMonths(1).AddDays(-1);
             var etkinlikler  = await etkinlikRepo.AralikGetirAsync(aktifKullanici.KullaniciId, ayBaslangici, ayBitisi);
-            var sonuc        = gelirServisi.HesaplaAylik(ay, yil, etkinlikler, bos);
+            var sonuc        = gelirServisi.HesaplaAylik(ay, yil, etkinlikler, new List<BeklenenEgitim>());
 
             // Gerçekleşen
             foreach (var k in sonuc.EtkinlikDetaylari)
@@ -94,14 +90,15 @@ public class GelirController(
 
                 var key = GetKey(e.KurumId);
                 EnsureData(dict, key, e.KurumId, e.KurumAdi, renkLookup);
-                dict[key].AyPlanlananGunler[ay - 1] += gunSayisi;
+                dict[key].AyPlanlananGunler[ay - 1]  += gunSayisi;
+                dict[key].AyPlanlananGelirler[ay - 1] += gunSayisi * (e.GunlukFiyat ?? 0m);
             }
         }
 
-        // Beklenen (yıllık, kurum bazlı toplam)
+        // Beklenen (yıllık, kurum bazlı toplam) — UTC offset için aralığı genişlet
         var tumBeklenenler = await beklenenRepo.AralikGetirAsync(
             aktifKullanici.KullaniciId,
-            new DateTime(yil, 1, 1),
+            new DateTime(yil - 1, 12, 31),          // Dec 31 önceki yıl (UTC+X offset için)
             new DateTime(yil, 12, 31, 23, 59, 59));
 
         foreach (var b in tumBeklenenler)
@@ -116,20 +113,22 @@ public class GelirController(
             .OrderByDescending(d => d.ToplamGelir + d.BeklenenGelir)
             .Select(d => new
             {
-                kurumId             = d.KurumId,
-                kurumAdi            = d.KurumAdi,
-                renk                = d.Renk,
-                toplamGun           = d.ToplamGun,
-                toplamGelir         = d.ToplamGelir,
-                planlananToplamGun  = d.PlanlananToplamGun,
-                beklenenToplamGun   = d.BeklenenGun,
-                beklenenToplamGelir = d.BeklenenGelir,
-                aylar               = Enumerable.Range(0, 12).Select(i => new
+                kurumId              = d.KurumId,
+                kurumAdi             = d.KurumAdi,
+                renk                 = d.Renk,
+                toplamGun            = d.ToplamGun,
+                toplamGelir          = d.ToplamGelir,
+                planlananToplamGun   = d.PlanlananToplamGun,
+                planlananToplamGelir = d.PlanlananToplamGelir,
+                beklenenToplamGun    = d.BeklenenGun,
+                beklenenToplamGelir  = d.BeklenenGelir,
+                aylar                = Enumerable.Range(0, 12).Select(i => new
                 {
-                    ay           = i + 1,
-                    gunSayisi    = d.AyGunler[i],
-                    toplamGelir  = d.AyGelirler[i],
-                    planlananGun = d.AyPlanlananGunler[i],
+                    ay             = i + 1,
+                    gunSayisi      = d.AyGunler[i],
+                    toplamGelir    = d.AyGelirler[i],
+                    planlananGun   = d.AyPlanlananGunler[i],
+                    planlananGelir = d.AyPlanlananGelirler[i],
                 }).ToList(),
             });
 
@@ -150,16 +149,18 @@ public class GelirController(
 
     private sealed class KurumData(int? kurumId, string kurumAdi, string? renk)
     {
-        public int?      KurumId            { get; } = kurumId;
-        public string    KurumAdi           { get; } = kurumAdi;
-        public string?   Renk               { get; } = renk;
-        public int[]     AyGunler           { get; } = new int[12];
-        public decimal[] AyGelirler         { get; } = new decimal[12];
-        public int[]     AyPlanlananGunler  { get; } = new int[12];
-        public int       BeklenenGun        { get; set; }
-        public decimal   BeklenenGelir      { get; set; }
-        public int       ToplamGun          => AyGunler.Sum();
-        public decimal   ToplamGelir        => AyGelirler.Sum();
-        public int       PlanlananToplamGun => AyPlanlananGunler.Sum();
+        public int?      KurumId             { get; } = kurumId;
+        public string    KurumAdi            { get; } = kurumAdi;
+        public string?   Renk                { get; } = renk;
+        public int[]     AyGunler            { get; } = new int[12];
+        public decimal[] AyGelirler          { get; } = new decimal[12];
+        public int[]     AyPlanlananGunler   { get; } = new int[12];
+        public decimal[] AyPlanlananGelirler { get; } = new decimal[12];
+        public int       BeklenenGun         { get; set; }
+        public decimal   BeklenenGelir       { get; set; }
+        public int       ToplamGun           => AyGunler.Sum();
+        public decimal   ToplamGelir         => AyGelirler.Sum();
+        public int       PlanlananToplamGun  => AyPlanlananGunler.Sum();
+        public decimal   PlanlananToplamGelir => AyPlanlananGelirler.Sum();
     }
 }

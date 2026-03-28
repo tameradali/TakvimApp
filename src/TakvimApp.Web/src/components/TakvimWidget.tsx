@@ -22,6 +22,7 @@ export interface TakvimEtkinlik {
   masraf?: number | null
   kurumId?: number | null
   kurumAdi?: string | null
+  beklenenGunSayisi?: number
 }
 
 interface FCEvent {

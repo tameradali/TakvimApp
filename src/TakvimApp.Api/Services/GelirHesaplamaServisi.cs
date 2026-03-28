@@ -14,6 +14,15 @@ public class GelirHesaplamaServisi
         int?    KurumId,
         string? KurumAdi);
 
+    public record PlanlananGelirKalemi(
+        int     EtkinlikId,
+        string  Baslik,
+        int     PlanlananGunSayisi,
+        decimal GunlukFiyat,
+        decimal ToplamGelir,
+        int?    KurumId,
+        string? KurumAdi);
+
     public record BeklenenGelirKalemi(
         int     EgitimId,
         string  Baslik,
@@ -28,7 +37,8 @@ public class GelirHesaplamaServisi
         int Yil,
         decimal ToplamGelir,
         List<EtkinlikGelirKalemi>  EtkinlikDetaylari,
-        List<BeklenenGelirKalemi>  BeklenenDetaylari);
+        List<BeklenenGelirKalemi>  BeklenenDetaylari,
+        List<PlanlananGelirKalemi> PlanlananDetaylari);
 
     public AylikGelirSonucu HesaplaAylik(
         int ay, int yil,
@@ -36,42 +46,55 @@ public class GelirHesaplamaServisi
         List<BeklenenEgitim>   beklenenler)
     {
         var bugun         = DateTime.UtcNow.Date;
+        var yarin         = bugun.AddDays(1);
         var ayBaslangici  = new DateTime(yil, ay, 1);
         var ayBitisi      = ayBaslangici.AddMonths(1).AddDays(-1);
 
-        var etkinlikKalemleri = new List<EtkinlikGelirKalemi>();
+        var etkinlikKalemleri  = new List<EtkinlikGelirKalemi>();
+        var planlananKalemleri = new List<PlanlananGelirKalemi>();
+
         foreach (var e in etkinlikler)
         {
             if (e.GunlukFiyat is null || e.GunlukFiyat <= 0) continue;
+            if (e.EtkinlikTuru == "Toplanti") continue;
 
-            // iCal DTEND exclusive olduğu için BitisTarihi = son günün ertesi günü.
-            // effectiveEnd hesaplamasında +1 eklenmez; bugün dahil etmek için cap = bugun+1.
-            var effectiveStart = e.BaslangicTarihi.Date > ayBaslangici ? e.BaslangicTarihi.Date : ayBaslangici;
-            var effectiveEnd   = e.BitisTarihi.Date < ayBitisi.AddDays(1) ? e.BitisTarihi.Date : ayBitisi.AddDays(1);
-            effectiveEnd       = effectiveEnd <= bugun ? effectiveEnd : bugun.AddDays(1);
+            // Gerçekleşen (tamamlanan) günler
+            var effStart = e.BaslangicTarihi.Date > ayBaslangici ? e.BaslangicTarihi.Date : ayBaslangici;
+            var effEnd   = e.BitisTarihi.Date < ayBitisi.AddDays(1) ? e.BitisTarihi.Date : ayBitisi.AddDays(1);
+            effEnd       = effEnd <= bugun ? effEnd : bugun.AddDays(1);
 
-            if (effectiveEnd <= effectiveStart) continue;
+            if (effEnd > effStart)
+            {
+                var gunSayisi = (effEnd - effStart).Days;
+                var masraf    = (e.Masraf ?? 0m) * gunSayisi;
+                var toplam    = gunSayisi * e.GunlukFiyat.Value + masraf;
+                etkinlikKalemleri.Add(new EtkinlikGelirKalemi(
+                    e.Id, e.Baslik, gunSayisi, e.GunlukFiyat.Value, masraf, toplam,
+                    e.KurumId, e.KurumAdi));
+            }
 
-            var gunSayisi  = (effectiveEnd - effectiveStart).Days;
-            var masraf     = (e.Masraf ?? 0m) * gunSayisi;   // masraf gün bazlı
-            var toplam     = gunSayisi * e.GunlukFiyat.Value + masraf;
+            // Planlanan (gelecek) günler
+            var plStart = e.BaslangicTarihi.Date > ayBaslangici ? e.BaslangicTarihi.Date : ayBaslangici;
+            if (plStart < yarin) plStart = yarin;
+            var plEnd = e.BitisTarihi.Date < ayBitisi.AddDays(1) ? e.BitisTarihi.Date : ayBitisi.AddDays(1);
 
-            etkinlikKalemleri.Add(new EtkinlikGelirKalemi(
-                e.Id, e.Baslik, gunSayisi, e.GunlukFiyat.Value, masraf, toplam,
-                e.KurumId, e.KurumAdi));
+            if (plEnd > plStart)
+            {
+                var plGun    = (plEnd - plStart).Days;
+                var plToplam = plGun * e.GunlukFiyat.Value;
+                planlananKalemleri.Add(new PlanlananGelirKalemi(
+                    e.Id, e.Baslik, plGun, e.GunlukFiyat.Value, plToplam,
+                    e.KurumId, e.KurumAdi));
+            }
         }
 
+        // Beklenen: BeklenenGunSayisi alanını doğrudan kullan (tarih aralığı hesaplaması değil)
         var beklenenKalemleri = new List<BeklenenGelirKalemi>();
         foreach (var b in beklenenler)
         {
-            var effectiveStart = b.BaslangicTarihi.Date > ayBaslangici ? b.BaslangicTarihi.Date : ayBaslangici;
-            var effectiveEnd   = b.BitisTarihi.Date < ayBitisi ? b.BitisTarihi.Date : ayBitisi;
-
-            if (effectiveEnd < effectiveStart) continue;
-
-            var gunSayisi = (effectiveEnd - effectiveStart).Days + 1;
-            var toplam    = gunSayisi * b.GunlukFiyat;
-
+            var gunSayisi = b.BeklenenGunSayisi;
+            if (gunSayisi <= 0) continue;
+            var toplam = gunSayisi * b.GunlukFiyat;
             beklenenKalemleri.Add(new BeklenenGelirKalemi(
                 b.Id, b.Baslik, gunSayisi, b.GunlukFiyat, toplam,
                 b.KurumId, b.KurumAdi));
@@ -80,6 +103,6 @@ public class GelirHesaplamaServisi
         var toplamGelir = etkinlikKalemleri.Sum(k => k.ToplamGelir)
                         + beklenenKalemleri.Sum(k => k.ToplamGelir);
 
-        return new AylikGelirSonucu(ay, yil, toplamGelir, etkinlikKalemleri, beklenenKalemleri);
+        return new AylikGelirSonucu(ay, yil, toplamGelir, etkinlikKalemleri, beklenenKalemleri, planlananKalemleri);
     }
 }

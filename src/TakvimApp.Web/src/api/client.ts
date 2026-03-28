@@ -86,6 +86,16 @@ export interface EtkinlikGelirKalemi {
   kurumAdi?: string | null
 }
 
+export interface PlanlananGelirKalemi {
+  etkinlikId: number
+  baslik: string
+  planlananGunSayisi: number
+  gunlukFiyat: number
+  toplamGelir: number
+  kurumId?: number | null
+  kurumAdi?: string | null
+}
+
 export interface BeklenenGelirKalemi {
   egitimId: number
   baslik: string
@@ -102,6 +112,7 @@ export interface AylikGelir {
   toplamGelir: number
   etkinlikDetaylari: EtkinlikGelirKalemi[]
   beklenenDetaylari: BeklenenGelirKalemi[]
+  planlananDetaylari: PlanlananGelirKalemi[]
 }
 
 export interface Kullanici {
@@ -248,6 +259,7 @@ export interface KurumAyDetay {
   gunSayisi: number
   toplamGelir: number
   planlananGun: number
+  planlananGelir: number
 }
 
 export interface KurumYillikRapor {
@@ -257,6 +269,7 @@ export interface KurumYillikRapor {
   toplamGun: number
   toplamGelir: number
   planlananToplamGun: number
+  planlananToplamGelir: number
   beklenenToplamGun: number
   beklenenToplamGelir: number
   aylar: KurumAyDetay[]

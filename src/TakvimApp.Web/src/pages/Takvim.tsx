@@ -68,6 +68,7 @@ export function Takvim() {
           id: b.id, title: b.baslik,
           start: new Date(b.baslangicTarihi), end: new Date(b.bitisTarihi),
           tur: 'beklenen' as const, gunlukFiyat: b.gunlukFiyat, allDay: true,
+          beklenenGunSayisi: b.beklenenGunSayisi,
         })),
       ])
     }).catch(() => {})
@@ -80,7 +81,7 @@ export function Takvim() {
       const s  = new Date(e.start); s.setHours(0, 0, 0, 0)
       const en = new Date(e.end);   en.setHours(0, 0, 0, 0)
       if (e.tur === 'beklenen') {
-        acc.beklenen += etkinlikGunSayisi(s, en)
+        acc.beklenen += e.beklenenGunSayisi ?? etkinlikGunSayisi(s, en)
       } else if (e.etkinlikTuru === 'Toplanti') {
         acc.toplanti += etkinlikGunSayisi(s, en)
       } else {
