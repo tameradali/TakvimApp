@@ -35,6 +35,10 @@ export function Takvim() {
   const sonYuklenenAralik    = useRef<string>('')
   const sonYuklenenAralikRef = useRef<{ start: Date; end: Date } | null>(null)
 
+  // Yıllık gün sayacı için ayrı veri seti
+  const [aktifYil, setAktifYil] = useState(new Date().getFullYear())
+  const [yillikEtkinlikler, setYillikEtkinlikler] = useState<TakvimEtkinlik[]>([])
+
   const [kurumlar, setKurumlar] = useState<Kurum[]>([])
 
   const [seciliEtkinlik, setSeciliEtkinlik]           = useState<TakvimEtkinlik | null>(null)
@@ -45,9 +49,33 @@ export function Takvim() {
   const [kurumIdInput, setKurumIdInput]               = useState<number | null>(null)
   const [bilgiKayitLoading, setBilgiKayitLoading]     = useState(false)
 
-  // Gün sayısı hesapla
+  // Yıl değişince tüm yılın etkinliklerini çek (gün sayacı için)
+  useEffect(() => {
+    const bs = new Date(aktifYil, 0, 1)
+    const bt = new Date(aktifYil, 11, 31, 23, 59, 59)
+    Promise.all([
+      getEgitimEtkinlikleriAralik(bs, bt),
+      getBeklenenEgitimlerAralik(bs, bt),
+    ]).then(([ed, bd]) => {
+      setYillikEtkinlikler([
+        ...ed.map((e: EgitimEtkinligi) => ({
+          id: e.id, title: e.baslik,
+          start: new Date(e.baslangicTarihi), end: new Date(e.bitisTarihi),
+          tur: (e.etkinlikTuru === 'Toplanti' ? 'toplanti' : 'planlanan') as TakvimEtkinlik['tur'],
+          etkinlikTuru: e.etkinlikTuru, gunlukFiyat: e.gunlukFiyat, allDay: true,
+        })),
+        ...bd.map((b: BeklenenEgitim) => ({
+          id: b.id, title: b.baslik,
+          start: new Date(b.baslangicTarihi), end: new Date(b.bitisTarihi),
+          tur: 'beklenen' as const, gunlukFiyat: b.gunlukFiyat, allDay: true,
+        })),
+      ])
+    }).catch(() => {})
+  }, [aktifYil])
+
+  // Gün sayısı hesapla — yıllık veriden
   const bugun = new Date(); bugun.setHours(0, 0, 0, 0)
-  const gunSayilari = etkinlikler.reduce(
+  const gunSayilari = yillikEtkinlikler.reduce(
     (acc, e) => {
       const s  = new Date(e.start); s.setHours(0, 0, 0, 0)
       const en = new Date(e.end);   en.setHours(0, 0, 0, 0)
@@ -220,6 +248,9 @@ export function Takvim() {
                     if (sonYuklenenAralik.current === key) return
                     sonYuklenenAralik.current = key
                     sonYuklenenAralikRef.current = { start, end }
+                    // Görüntülenen yılı belirle (aralığın ortası)
+                    const mid = new Date((start.getTime() + end.getTime()) / 2)
+                    setAktifYil(mid.getFullYear())
                     yukle(start, end)
                   }}
                   onSelectEvent={handleEtkinlikSec}

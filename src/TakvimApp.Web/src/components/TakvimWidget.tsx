@@ -66,8 +66,8 @@ function etkinligiDonustur(e: TakvimEtkinlik): FCEvent[] {
   const eStart = new Date(e.start); eStart.setHours(0, 0, 0, 0)
   const eEnd   = new Date(e.end);   eEnd.setHours(0, 0, 0, 0)
 
-  // Tamamen geçmiş
-  if (eEnd < bugun) {
+  // Tamamen geçmiş (iCal DTEND exclusive olduğu için <= kullanıyoruz)
+  if (eEnd <= bugun) {
     return [{ ...base, id: String(e.id) + '_g', title: e.title, start: e.start, end: e.end,
       backgroundColor: '#4caf50', borderColor: '#388e3c', textColor: '#fff' }]
   }
