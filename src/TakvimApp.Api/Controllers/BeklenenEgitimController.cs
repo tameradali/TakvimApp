@@ -14,11 +14,13 @@ public class BeklenenEgitimController(
     AktifKullaniciServisi aktifKullanici) : ControllerBase
 {
     public record BeklenenEgitimDto(
-        string Baslik,
+        string   Baslik,
         DateTime BaslangicTarihi,
         DateTime BitisTarihi,
-        decimal GunlukFiyat,
-        string? Notlar);
+        decimal  GunlukFiyat,
+        string?  Notlar,
+        int?     KurumId,
+        int      BeklenenGunSayisi = 1);
 
     [HttpGet]
     public async Task<IActionResult> Listele()
@@ -47,12 +49,14 @@ public class BeklenenEgitimController(
     {
         var egitim = new BeklenenEgitim
         {
-            KullaniciId     = aktifKullanici.KullaniciId,
-            Baslik          = dto.Baslik,
-            BaslangicTarihi = dto.BaslangicTarihi,
-            BitisTarihi     = dto.BitisTarihi,
-            GunlukFiyat     = dto.GunlukFiyat,
-            Notlar          = dto.Notlar,
+            KullaniciId       = aktifKullanici.KullaniciId,
+            Baslik            = dto.Baslik,
+            BaslangicTarihi   = dto.BaslangicTarihi,
+            BitisTarihi       = dto.BitisTarihi,
+            GunlukFiyat       = dto.GunlukFiyat,
+            Notlar            = dto.Notlar,
+            KurumId           = dto.KurumId,
+            BeklenenGunSayisi = dto.BeklenenGunSayisi,
         };
         var id = await repo.EkleAsync(egitim);
         return Ok(new { id });
@@ -64,11 +68,13 @@ public class BeklenenEgitimController(
         var mevcut = await repo.GetirAsync(id);
         if (mevcut is null) return NotFound();
 
-        mevcut.Baslik          = dto.Baslik;
-        mevcut.BaslangicTarihi = dto.BaslangicTarihi;
-        mevcut.BitisTarihi     = dto.BitisTarihi;
-        mevcut.GunlukFiyat     = dto.GunlukFiyat;
-        mevcut.Notlar          = dto.Notlar;
+        mevcut.Baslik            = dto.Baslik;
+        mevcut.BaslangicTarihi   = dto.BaslangicTarihi;
+        mevcut.BitisTarihi       = dto.BitisTarihi;
+        mevcut.GunlukFiyat       = dto.GunlukFiyat;
+        mevcut.Notlar            = dto.Notlar;
+        mevcut.KurumId           = dto.KurumId;
+        mevcut.BeklenenGunSayisi = dto.BeklenenGunSayisi;
 
         await repo.GuncelleAsync(mevcut);
         return NoContent();

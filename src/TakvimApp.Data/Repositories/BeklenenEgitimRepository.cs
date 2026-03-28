@@ -18,12 +18,14 @@ public class BeklenenEgitimRepository(VeritabaniYonetici db, AktifKullaniciServi
         OlusturulmaTarihi = r.GetDateTime(7),
         KurumId           = r.IsDBNull(8) ? null : r.GetInt32(8),
         KurumAdi          = r.IsDBNull(9) ? null : r.GetString(9),
+        BeklenenGunSayisi = r.IsDBNull(10) ? 1 : r.GetInt32(10),
     };
 
     private const string SelectSql = @"
         SELECT b.Id, b.KullaniciId, b.Baslik, b.BaslangicTarihi, b.BitisTarihi,
                b.GunlukFiyat, b.Notlar, b.OlusturulmaTarihi,
-               b.KurumId, k.Ad AS KurumAdi
+               b.KurumId, k.Ad AS KurumAdi,
+               b.BeklenenGunSayisi
         FROM BeklenenEgitimler b
         LEFT JOIN Kurumlar k ON b.KurumId = k.Id";
 
@@ -48,7 +50,7 @@ public class BeklenenEgitimRepository(VeritabaniYonetici db, AktifKullaniciServi
               AND b.BaslangicTarihi <= @bitis
               AND b.BitisTarihi    >= @baslangic
             ORDER BY b.BaslangicTarihi";
-        komut.Parameters.AddWithValue("@kid",      kullaniciId);
+        komut.Parameters.AddWithValue("@kid",       kullaniciId);
         komut.Parameters.AddWithValue("@baslangic", baslangic);
         komut.Parameters.AddWithValue("@bitis",     bitis);
         using var r  = await komut.ExecuteReaderAsync();
@@ -75,16 +77,17 @@ public class BeklenenEgitimRepository(VeritabaniYonetici db, AktifKullaniciServi
         using var komut    = baglanti.CreateCommand();
         komut.CommandText  = @"
             INSERT INTO BeklenenEgitimler
-                (KullaniciId, Baslik, BaslangicTarihi, BitisTarihi, GunlukFiyat, Notlar, OlusturulmaTarihi, KurumId)
-            VALUES (@kid, @baslik, @bs, @bt, @fiyat, @notlar, NOW(), @kurumId)
+                (KullaniciId, Baslik, BaslangicTarihi, BitisTarihi, GunlukFiyat, Notlar, OlusturulmaTarihi, KurumId, BeklenenGunSayisi)
+            VALUES (@kid, @baslik, @bs, @bt, @fiyat, @notlar, NOW(), @kurumId, @gunSayisi)
             RETURNING Id";
-        komut.Parameters.AddWithValue("@kid",    kullanici.KullaniciId);
-        komut.Parameters.AddWithValue("@baslik", egitim.Baslik);
-        komut.Parameters.AddWithValue("@bs",     egitim.BaslangicTarihi);
-        komut.Parameters.AddWithValue("@bt",     egitim.BitisTarihi);
-        komut.Parameters.AddWithValue("@fiyat",  egitim.GunlukFiyat);
-        komut.Parameters.AddWithValue("@notlar", (object?)egitim.Notlar ?? DBNull.Value);
-        komut.Parameters.AddWithValue("@kurumId",(object?)egitim.KurumId ?? DBNull.Value);
+        komut.Parameters.AddWithValue("@kid",       kullanici.KullaniciId);
+        komut.Parameters.AddWithValue("@baslik",    egitim.Baslik);
+        komut.Parameters.AddWithValue("@bs",        egitim.BaslangicTarihi);
+        komut.Parameters.AddWithValue("@bt",        egitim.BitisTarihi);
+        komut.Parameters.AddWithValue("@fiyat",     egitim.GunlukFiyat);
+        komut.Parameters.AddWithValue("@notlar",    (object?)egitim.Notlar    ?? DBNull.Value);
+        komut.Parameters.AddWithValue("@kurumId",   (object?)egitim.KurumId   ?? DBNull.Value);
+        komut.Parameters.AddWithValue("@gunSayisi", egitim.BeklenenGunSayisi);
         return (int)(await komut.ExecuteScalarAsync())!;
     }
 
@@ -95,15 +98,18 @@ public class BeklenenEgitimRepository(VeritabaniYonetici db, AktifKullaniciServi
         komut.CommandText  = @"
             UPDATE BeklenenEgitimler
             SET Baslik = @baslik, BaslangicTarihi = @bs, BitisTarihi = @bt,
-                GunlukFiyat = @fiyat, Notlar = @notlar
+                GunlukFiyat = @fiyat, Notlar = @notlar, KurumId = @kurumId,
+                BeklenenGunSayisi = @gunSayisi
             WHERE Id = @id AND KullaniciId = @kid";
-        komut.Parameters.AddWithValue("@baslik", egitim.Baslik);
-        komut.Parameters.AddWithValue("@bs",     egitim.BaslangicTarihi);
-        komut.Parameters.AddWithValue("@bt",     egitim.BitisTarihi);
-        komut.Parameters.AddWithValue("@fiyat",  egitim.GunlukFiyat);
-        komut.Parameters.AddWithValue("@notlar", (object?)egitim.Notlar ?? DBNull.Value);
-        komut.Parameters.AddWithValue("@id",     egitim.Id);
-        komut.Parameters.AddWithValue("@kid",    kullanici.KullaniciId);
+        komut.Parameters.AddWithValue("@baslik",    egitim.Baslik);
+        komut.Parameters.AddWithValue("@bs",        egitim.BaslangicTarihi);
+        komut.Parameters.AddWithValue("@bt",        egitim.BitisTarihi);
+        komut.Parameters.AddWithValue("@fiyat",     egitim.GunlukFiyat);
+        komut.Parameters.AddWithValue("@notlar",    (object?)egitim.Notlar    ?? DBNull.Value);
+        komut.Parameters.AddWithValue("@kurumId",   (object?)egitim.KurumId   ?? DBNull.Value);
+        komut.Parameters.AddWithValue("@gunSayisi", egitim.BeklenenGunSayisi);
+        komut.Parameters.AddWithValue("@id",        egitim.Id);
+        komut.Parameters.AddWithValue("@kid",       kullanici.KullaniciId);
         await komut.ExecuteNonQueryAsync();
     }
 

@@ -91,6 +91,16 @@ public class VeritabaniYonetici
             }
         }
 
+        // Migrasyon 6: BeklenenEgitimler — BeklenenGunSayisi kolonu
+        {
+            if (!KolonVarMi(baglanti, "beklenenEgitimler", "beklenegunsayisi"))
+            {
+                using var mig = baglanti.CreateCommand();
+                mig.CommandText = "ALTER TABLE BeklenenEgitimler ADD COLUMN IF NOT EXISTS BeklenenGunSayisi INTEGER NOT NULL DEFAULT 1";
+                mig.ExecuteNonQuery();
+            }
+        }
+
         // Migrasyon 2: EgitimEtkinlikleri yeni alanlar
         {
             if (!KolonVarMi(baglanti, "egitimetkinlikleri", "yer"))

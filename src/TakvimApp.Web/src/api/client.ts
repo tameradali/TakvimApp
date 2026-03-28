@@ -72,6 +72,7 @@ export interface BeklenenEgitim {
   notlar: string | null
   kurumId: number | null
   kurumAdi: string | null
+  beklenenGunSayisi: number
 }
 
 export interface EtkinlikGelirKalemi {
@@ -252,9 +253,12 @@ export interface KurumAyDetay {
 export interface KurumYillikRapor {
   kurumId: number | null
   kurumAdi: string
+  renk: string | null
   toplamGun: number
   toplamGelir: number
   planlananToplamGun: number
+  beklenenToplamGun: number
+  beklenenToplamGelir: number
   aylar: KurumAyDetay[]
 }
 

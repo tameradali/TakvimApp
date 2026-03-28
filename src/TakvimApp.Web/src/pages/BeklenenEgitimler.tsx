@@ -9,13 +9,19 @@ interface FormState {
   baslik: string
   yil: string
   gunlukFiyat: string
+  beklenenGunSayisi: string
   notlar: string
   kurumId: string
 }
 
 function bosForm(): FormState {
-  return { baslik: '', yil: String(new Date().getFullYear()), gunlukFiyat: '', notlar: '', kurumId: '' }
+  return {
+    baslik: '', yil: String(new Date().getFullYear()),
+    gunlukFiyat: '', beklenenGunSayisi: '1', notlar: '', kurumId: '',
+  }
 }
+
+function fmt(v: number) { return v.toLocaleString('tr-TR', { minimumFractionDigits: 2 }) }
 
 export function BeklenenEgitimler() {
   const [liste, setListe]               = useState<BeklenenEgitim[]>([])
@@ -44,11 +50,12 @@ export function BeklenenEgitimler() {
     if (egitim) {
       setDuzenlenen(egitim)
       setForm({
-        baslik:      egitim.baslik,
-        yil:         String(new Date(egitim.baslangicTarihi).getFullYear()),
-        gunlukFiyat: String(egitim.gunlukFiyat),
-        notlar:      egitim.notlar ?? '',
-        kurumId:     egitim.kurumId ? String(egitim.kurumId) : '',
+        baslik:            egitim.baslik,
+        yil:               String(new Date(egitim.baslangicTarihi).getFullYear()),
+        gunlukFiyat:       String(egitim.gunlukFiyat),
+        beklenenGunSayisi: String(egitim.beklenenGunSayisi ?? 1),
+        notlar:            egitim.notlar ?? '',
+        kurumId:           egitim.kurumId ? String(egitim.kurumId) : '',
       })
     } else {
       setDuzenlenen(null)
@@ -61,13 +68,13 @@ export function BeklenenEgitimler() {
     e.preventDefault()
     setKayitLoading(true)
     try {
-      // Tarihin yalnızca yılı var — 01 Ocak olarak sakla
       const dt = new Date(parseInt(form.yil), 0, 1)
       const dto = {
         baslik:            form.baslik,
         baslangicTarihi:   dt.toISOString(),
         bitisTarihi:       dt.toISOString(),
         gunlukFiyat:       parseFloat(form.gunlukFiyat),
+        beklenenGunSayisi: parseInt(form.beklenenGunSayisi) || 1,
         notlar:            form.notlar || null,
         kurumId:           form.kurumId ? parseInt(form.kurumId) : null,
         kurumAdi:          null,
@@ -94,6 +101,9 @@ export function BeklenenEgitimler() {
     }
   }
 
+  const toplamGun   = liste.reduce((s, e) => s + (e.beklenenGunSayisi ?? 1), 0)
+  const toplamGelir = liste.reduce((s, e) => s + (e.beklenenGunSayisi ?? 1) * e.gunlukFiyat, 0)
+
   return (
     <>
       <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
@@ -107,6 +117,36 @@ export function BeklenenEgitimler() {
       </div>
 
       {hata && <div className="alert alert-danger py-2">{hata}</div>}
+
+      {/* Özet */}
+      {liste.length > 0 && (
+        <div className="row g-3 mb-4">
+          <div className="col-sm-4">
+            <div className="card">
+              <div className="card-body py-3">
+                <p className="text-muted small mb-1">Toplam Kayıt</p>
+                <h5 className="mb-0" style={{ color: '#f06292' }}>{liste.length} eğitim</h5>
+              </div>
+            </div>
+          </div>
+          <div className="col-sm-4">
+            <div className="card">
+              <div className="card-body py-3">
+                <p className="text-muted small mb-1">Toplam Beklenen Gün</p>
+                <h5 className="mb-0" style={{ color: '#f06292' }}>{toplamGun} gün</h5>
+              </div>
+            </div>
+          </div>
+          <div className="col-sm-4">
+            <div className="card">
+              <div className="card-body py-3">
+                <p className="text-muted small mb-1">Potansiyel Gelir</p>
+                <h5 className="mb-0" style={{ color: '#696cff' }}>{fmt(toplamGelir)} ₺</h5>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="card">
         {loading ? (
@@ -124,7 +164,9 @@ export function BeklenenEgitimler() {
                   <th>Başlık</th>
                   <th>Yıl</th>
                   <th>Kurum</th>
+                  <th>Beklenen Gün</th>
                   <th>Günlük Fiyat</th>
+                  <th>Potansiyel Gelir</th>
                   <th>Notlar</th>
                   <th></th>
                 </tr>
@@ -135,7 +177,11 @@ export function BeklenenEgitimler() {
                     <td><strong>{e.baslik}</strong></td>
                     <td>{new Date(e.baslangicTarihi).getFullYear()}</td>
                     <td className="text-muted small">{e.kurumAdi ?? '—'}</td>
+                    <td style={{ color: '#f06292' }}><strong>{e.beklenenGunSayisi ?? 1} gün</strong></td>
                     <td>{e.gunlukFiyat.toLocaleString('tr-TR')} ₺</td>
+                    <td style={{ color: '#696cff' }}>
+                      {fmt((e.beklenenGunSayisi ?? 1) * e.gunlukFiyat)} ₺
+                    </td>
                     <td><span className="text-muted small">{e.notlar ?? '—'}</span></td>
                     <td>
                       <div className="d-flex gap-1">
@@ -173,11 +219,18 @@ export function BeklenenEgitimler() {
                       <input className="form-control" required value={form.baslik}
                         onChange={e => setForm(f => ({ ...f, baslik: e.target.value }))} />
                     </div>
-                    <div className="mb-3">
-                      <label className="form-label">Yıl</label>
-                      <input type="number" className="form-control" required
-                        min={2020} max={2035} value={form.yil}
-                        onChange={e => setForm(f => ({ ...f, yil: e.target.value }))} />
+                    <div className="row g-3 mb-3">
+                      <div className="col-6">
+                        <label className="form-label">Yıl</label>
+                        <input type="number" className="form-control" required min={2020} max={2035}
+                          value={form.yil} onChange={e => setForm(f => ({ ...f, yil: e.target.value }))} />
+                      </div>
+                      <div className="col-6">
+                        <label className="form-label">Beklenen Gün Sayısı</label>
+                        <input type="number" className="form-control" required min={1} step={1}
+                          value={form.beklenenGunSayisi}
+                          onChange={e => setForm(f => ({ ...f, beklenenGunSayisi: e.target.value }))} />
+                      </div>
                     </div>
                     <div className="mb-3">
                       <label className="form-label">Kurum <span className="text-muted">(opsiyonel)</span></label>
@@ -192,6 +245,11 @@ export function BeklenenEgitimler() {
                       <input type="number" className="form-control" required min={0} step={0.01}
                         value={form.gunlukFiyat}
                         onChange={e => setForm(f => ({ ...f, gunlukFiyat: e.target.value }))} />
+                      {form.gunlukFiyat && form.beklenenGunSayisi && (
+                        <small className="text-muted">
+                          Potansiyel: {fmt(parseFloat(form.gunlukFiyat || '0') * (parseInt(form.beklenenGunSayisi) || 1))} ₺
+                        </small>
+                      )}
                     </div>
                     <div className="mb-3">
                       <label className="form-label">Notlar <span className="text-muted">(opsiyonel)</span></label>
