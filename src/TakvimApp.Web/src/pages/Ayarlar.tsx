@@ -9,7 +9,7 @@ export function Ayarlar() {
   const [modalAcik, setModalAcik] = useState(false)
   const [duzenlenenId, setDuzenlenenId] = useState<number | null>(null)
   const [hesapAdi, setHesapAdi] = useState('')
-  const [jsonText, setJsonText] = useState('')
+  const [icsUrl, setIcsUrl] = useState('')
   const [aktifMi, setAktifMi] = useState(true)
   const [kayitLoading, setKayitLoading] = useState(false)
   const [senkronId, setSenkronId] = useState<number | null>(null)
@@ -27,7 +27,7 @@ export function Ayarlar() {
   async function modalAcYeni() {
     setDuzenlenenId(null)
     setHesapAdi('')
-    setJsonText('')
+    setIcsUrl('')
     setAktifMi(true)
     setModalAcik(true)
   }
@@ -37,7 +37,7 @@ export function Ayarlar() {
       const detay = await getGoogleHesap(id)
       setDuzenlenenId(id)
       setHesapAdi(detay.hesapAdi)
-      setJsonText(detay.servisHesabiJson)
+      setIcsUrl(detay.servisHesabiJson ?? '')
       setAktifMi(detay.aktifMi)
       setModalAcik(true)
     } catch (err: unknown) {
@@ -50,9 +50,9 @@ export function Ayarlar() {
     setKayitLoading(true)
     try {
       if (duzenlenenId) {
-        await putGoogleHesap(duzenlenenId, { hesapAdi, servisHesabiJson: jsonText, aktifMi })
+        await putGoogleHesap(duzenlenenId, { hesapAdi, servisHesabiJson: icsUrl, aktifMi })
       } else {
-        await postGoogleHesap({ hesapAdi, servisHesabiJson: jsonText })
+        await postGoogleHesap({ hesapAdi, servisHesabiJson: icsUrl })
       }
       setModalAcik(false)
       yukle()
@@ -64,7 +64,7 @@ export function Ayarlar() {
   }
 
   async function handleSil(id: number) {
-    if (!confirm('Bu Google hesabını ve tüm etkinliklerini silmek istiyor musunuz?')) return
+    if (!confirm('Bu takvimi ve tüm etkinliklerini silmek istiyor musunuz?')) return
     try {
       await deleteGoogleHesap(id)
       yukle()
@@ -90,10 +90,10 @@ export function Ayarlar() {
       <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <div>
           <h5 className="mb-0">Ayarlar</h5>
-          <p className="text-muted small mb-0">Google Calendar hesap yapılandırması</p>
+          <p className="text-muted small mb-0">Google Calendar iCal bağlantıları</p>
         </div>
         <button className="btn btn-primary btn-sm" onClick={modalAcYeni}>
-          <i className="ri ri-add-line me-1" />Hesap Ekle
+          <i className="ri ri-add-line me-1" />Takvim Ekle
         </button>
       </div>
 
@@ -101,22 +101,22 @@ export function Ayarlar() {
 
       <div className="card mb-4">
         <div className="card-header d-flex align-items-center gap-2">
-          <i className="ri ri-google-line" />
-          <h6 className="mb-0">Google Calendar Hesapları</h6>
+          <i className="ri ri-calendar-line" />
+          <h6 className="mb-0">Bağlı Takvimler</h6>
         </div>
         {loading ? (
           <div className="card-body text-center py-4"><span className="spinner-border text-primary" /></div>
         ) : hesaplar.length === 0 ? (
           <div className="card-body text-center py-4">
-            <i className="ri ri-google-line ri-48px text-muted" />
-            <p className="text-muted mt-2 mb-0">Henüz Google hesabı eklenmedi.</p>
-            <p className="text-muted small">Service Account JSON ile Google Calendar okuma yetkisi verin.</p>
+            <i className="ri ri-calendar-line ri-48px text-muted" />
+            <p className="text-muted mt-2 mb-1">Henüz takvim eklenmedi.</p>
+            <p className="text-muted small mb-0">Google Calendar'dan iCal URL kopyalayıp ekleyin.</p>
           </div>
         ) : (
           <div className="table-responsive">
             <table className="table table-hover mb-0">
               <thead>
-                <tr><th>Hesap Adı</th><th>Durum</th><th>Son Senkronizasyon</th><th></th></tr>
+                <tr><th>Takvim Adı</th><th>Durum</th><th>Son Güncelleme</th><th></th></tr>
               </thead>
               <tbody>
                 {hesaplar.map(h => (
@@ -128,18 +128,12 @@ export function Ayarlar() {
                       </span>
                     </td>
                     <td className="text-muted small">
-                      {h.sonSenkronizasyon
-                        ? new Date(h.sonSenkronizasyon).toLocaleString('tr-TR')
-                        : '—'}
+                      {h.sonSenkronizasyon ? new Date(h.sonSenkronizasyon).toLocaleString('tr-TR') : '—'}
                     </td>
                     <td>
                       <div className="d-flex gap-1">
-                        <button
-                          className="btn btn-sm btn-outline-success"
-                          onClick={() => handleSenkron(h.id)}
-                          disabled={senkronId === h.id}
-                          title="Senkronize Et"
-                        >
+                        <button className="btn btn-sm btn-outline-success" onClick={() => handleSenkron(h.id)}
+                          disabled={senkronId === h.id} title="Takvimi Güncelle">
                           {senkronId === h.id
                             ? <span className="spinner-border spinner-border-sm" />
                             : <i className="ri ri-refresh-line" />}
@@ -160,17 +154,26 @@ export function Ayarlar() {
         )}
       </div>
 
-      {/* Service Account JSON bilgi notu */}
+      {/* Nasıl yapılır */}
       <div className="card">
         <div className="card-body">
-          <h6 className="mb-2"><i className="ri ri-information-line me-1" />Service Account Nasıl Oluşturulur?</h6>
-          <ol className="text-muted small mb-0">
-            <li>Google Cloud Console → IAM &amp; Admin → Service Accounts</li>
-            <li>Yeni service account oluşturun</li>
-            <li>JSON anahtarı indirin</li>
-            <li>Google Calendar → Settings → Share with specific people: service account e-postasını "See all event details" yetkisiyle ekleyin</li>
-            <li>JSON içeriğini buraya yapıştırın</li>
-          </ol>
+          <h6 className="mb-3"><i className="ri ri-information-line me-1" />iCal URL Nasıl Alınır?</h6>
+          <div className="row g-3">
+            {[
+              { num: '1', text: 'Google Calendar\'ı açın (calendar.google.com)' },
+              { num: '2', text: 'Sol menüde takviminizin yanındaki ⋮ → "Ayarlar ve paylaşım"' },
+              { num: '3', text: 'Sayfayı aşağı kaydırın → "Takvimi entegre et"' },
+              { num: '4', text: '"Gizli adres iCal formatında" URL\'yi kopyalayın' },
+              { num: '5', text: 'TakvimApp\'te "Takvim Ekle" → URL\'yi yapıştırın' },
+            ].map(({ num, text }) => (
+              <div key={num} className="col-12 col-md-6">
+                <div className="d-flex gap-3 align-items-start">
+                  <span className="badge rounded-pill bg-primary">{num}</span>
+                  <small className="text-muted">{text}</small>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -179,31 +182,32 @@ export function Ayarlar() {
         <>
           <div className="modal-backdrop fade show" style={{ zIndex: 1040 }} onClick={() => setModalAcik(false)} />
           <div className="modal d-block" style={{ zIndex: 1050 }} tabIndex={-1}>
-            <div className="modal-dialog modal-dialog-centered modal-lg">
+            <div className="modal-dialog modal-dialog-centered">
               <div className="modal-content">
                 <div className="modal-header">
-                  <h5 className="modal-title">{duzenlenenId ? 'Hesabı Düzenle' : 'Yeni Google Hesabı'}</h5>
+                  <h5 className="modal-title">{duzenlenenId ? 'Takvimi Düzenle' : 'Yeni Takvim Ekle'}</h5>
                   <button className="btn-close" onClick={() => setModalAcik(false)} />
                 </div>
                 <form onSubmit={handleKaydet}>
                   <div className="modal-body">
                     <div className="mb-3">
-                      <label className="form-label">Hesap Adı (hatırlatıcı isim)</label>
-                      <input className="form-control" required placeholder="ör: Fatma Google" value={hesapAdi}
-                        onChange={e => setHesapAdi(e.target.value)} />
+                      <label className="form-label">Takvim Adı</label>
+                      <input className="form-control" required placeholder="ör: Fatma Eğitimleri"
+                        value={hesapAdi} onChange={e => setHesapAdi(e.target.value)} />
                     </div>
                     <div className="mb-3">
-                      <label className="form-label">Service Account JSON</label>
-                      <textarea
+                      <label className="form-label">Google Calendar iCal URL</label>
+                      <input
                         className="form-control"
-                        rows={8}
                         required={!duzenlenenId}
-                        placeholder='{"type":"service_account","project_id":"...","private_key_id":"...",...}'
-                        value={jsonText}
-                        onChange={e => setJsonText(e.target.value)}
-                        style={{ fontFamily: 'monospace', fontSize: 12 }}
+                        placeholder="https://calendar.google.com/calendar/ical/..."
+                        value={icsUrl}
+                        onChange={e => setIcsUrl(e.target.value)}
                       />
-                      {duzenlenenId && <small className="text-muted">Boş bırakırsanız mevcut JSON korunur.</small>}
+                      {duzenlenenId && <small className="text-muted">Boş bırakırsanız mevcut URL korunur.</small>}
+                      <small className="text-muted d-block mt-1">
+                        Google Calendar → Takvim Ayarları → "Gizli adres iCal formatında"
+                      </small>
                     </div>
                     {duzenlenenId && (
                       <div className="form-check">

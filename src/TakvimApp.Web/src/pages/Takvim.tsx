@@ -154,9 +154,9 @@ export function Takvim() {
         </div>
       )}
 
-      <div className="row g-4">
+      <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
         {/* Sol panel */}
-        <div className="col-12 col-xl-3">
+        <div style={{ width: 280, flexShrink: 0 }}>
           {/* Google Sync butonu */}
           <button
             className="btn btn-primary w-100 mb-4 d-flex align-items-center justify-content-center gap-2"
@@ -198,7 +198,7 @@ export function Takvim() {
         </div>
 
         {/* Ana takvim */}
-        <div className="col-12 col-xl-9">
+        <div style={{ flex: 1, minWidth: 0 }}>
           <div className="card">
             <div className="card-body">
               {loading ? (

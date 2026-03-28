@@ -10,6 +10,10 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddMemoryCache();
+builder.Services.AddHttpClient("ics", c => {
+    c.Timeout = TimeSpan.FromSeconds(30);
+    c.DefaultRequestHeaders.Add("User-Agent", "TakvimApp/1.0");
+});
 
 // ── Veritabanı ──
 string baglantiMetni =

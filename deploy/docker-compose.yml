@@ -35,21 +35,13 @@ services:
   web:
     image: ghcr.io/tameradali/takvimapp-web:latest
     container_name: takvimapp-web
+    ports:
+      - "8083:80"
     networks: [internal]
     depends_on: [api]
     restart: unless-stopped
     mem_limit: 128m
     mem_reservation: 64m
-
-  cloudflared:
-    image: cloudflare/cloudflared:latest
-    container_name: takvim-cloudflared
-    command: tunnel --no-autoupdate run
-    environment:
-      TUNNEL_TOKEN: ${CF_TUNNEL_TOKEN:-}
-    networks: [internal]
-    restart: unless-stopped
-    mem_limit: 64m
 
 networks:
   internal:
