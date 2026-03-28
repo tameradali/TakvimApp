@@ -7,19 +7,15 @@ import type { BeklenenEgitim, Kurum } from '../api/client'
 
 interface FormState {
   baslik: string
-  baslangicTarihi: string
-  bitisTarihi: string
+  yil: string
   gunlukFiyat: string
   notlar: string
   kurumId: string
 }
 
-const bos: FormState = {
-  baslik: '', baslangicTarihi: '', bitisTarihi: '',
-  gunlukFiyat: '', notlar: '', kurumId: '',
+function bosForm(): FormState {
+  return { baslik: '', yil: String(new Date().getFullYear()), gunlukFiyat: '', notlar: '', kurumId: '' }
 }
-
-function toDateInput(iso: string) { return iso.split('T')[0] }
 
 export function BeklenenEgitimler() {
   const [liste, setListe]               = useState<BeklenenEgitim[]>([])
@@ -28,7 +24,7 @@ export function BeklenenEgitimler() {
   const [hata, setHata]                 = useState<string | null>(null)
   const [modalAcik, setModalAcik]       = useState(false)
   const [duzenlenen, setDuzenlenen]     = useState<BeklenenEgitim | null>(null)
-  const [form, setForm]                 = useState<FormState>(bos)
+  const [form, setForm]                 = useState<FormState>(bosForm)
   const [kayitLoading, setKayitLoading] = useState(false)
 
   function yukle() {
@@ -48,16 +44,15 @@ export function BeklenenEgitimler() {
     if (egitim) {
       setDuzenlenen(egitim)
       setForm({
-        baslik:          egitim.baslik,
-        baslangicTarihi: toDateInput(egitim.baslangicTarihi),
-        bitisTarihi:     toDateInput(egitim.bitisTarihi),
-        gunlukFiyat:     String(egitim.gunlukFiyat),
-        notlar:          egitim.notlar ?? '',
-        kurumId:         egitim.kurumId ? String(egitim.kurumId) : '',
+        baslik:      egitim.baslik,
+        yil:         String(new Date(egitim.baslangicTarihi).getFullYear()),
+        gunlukFiyat: String(egitim.gunlukFiyat),
+        notlar:      egitim.notlar ?? '',
+        kurumId:     egitim.kurumId ? String(egitim.kurumId) : '',
       })
     } else {
       setDuzenlenen(null)
-      setForm(bos)
+      setForm(bosForm())
     }
     setModalAcik(true)
   }
@@ -66,15 +61,17 @@ export function BeklenenEgitimler() {
     e.preventDefault()
     setKayitLoading(true)
     try {
+      // Tarihin yalnızca yılı var — 01 Ocak olarak sakla
+      const dt = new Date(parseInt(form.yil), 0, 1)
       const dto = {
         baslik:            form.baslik,
-        baslangicTarihi:   new Date(form.baslangicTarihi).toISOString(),
-        bitisTarihi:       new Date(form.bitisTarihi).toISOString(),
+        baslangicTarihi:   dt.toISOString(),
+        bitisTarihi:       dt.toISOString(),
         gunlukFiyat:       parseFloat(form.gunlukFiyat),
         notlar:            form.notlar || null,
         kurumId:           form.kurumId ? parseInt(form.kurumId) : null,
-        olusturulmaTarihi: new Date().toISOString(),
         kurumAdi:          null,
+        olusturulmaTarihi: new Date().toISOString(),
       }
       if (duzenlenen) await putBeklenenEgitim(duzenlenen.id, dto)
       else            await postBeklenenEgitim(dto)
@@ -125,9 +122,8 @@ export function BeklenenEgitimler() {
               <thead>
                 <tr>
                   <th>Başlık</th>
+                  <th>Yıl</th>
                   <th>Kurum</th>
-                  <th>Başlangıç</th>
-                  <th>Bitiş</th>
                   <th>Günlük Fiyat</th>
                   <th>Notlar</th>
                   <th></th>
@@ -137,9 +133,8 @@ export function BeklenenEgitimler() {
                 {liste.map(e => (
                   <tr key={e.id}>
                     <td><strong>{e.baslik}</strong></td>
+                    <td>{new Date(e.baslangicTarihi).getFullYear()}</td>
                     <td className="text-muted small">{e.kurumAdi ?? '—'}</td>
-                    <td>{new Date(e.baslangicTarihi).toLocaleDateString('tr-TR')}</td>
-                    <td>{new Date(e.bitisTarihi).toLocaleDateString('tr-TR')}</td>
                     <td>{e.gunlukFiyat.toLocaleString('tr-TR')} ₺</td>
                     <td><span className="text-muted small">{e.notlar ?? '—'}</span></td>
                     <td>
@@ -179,24 +174,18 @@ export function BeklenenEgitimler() {
                         onChange={e => setForm(f => ({ ...f, baslik: e.target.value }))} />
                     </div>
                     <div className="mb-3">
+                      <label className="form-label">Yıl</label>
+                      <input type="number" className="form-control" required
+                        min={2020} max={2035} value={form.yil}
+                        onChange={e => setForm(f => ({ ...f, yil: e.target.value }))} />
+                    </div>
+                    <div className="mb-3">
                       <label className="form-label">Kurum <span className="text-muted">(opsiyonel)</span></label>
                       <select className="form-select" value={form.kurumId}
                         onChange={e => setForm(f => ({ ...f, kurumId: e.target.value }))}>
                         <option value="">— Seçiniz —</option>
                         {kurumlar.map(k => <option key={k.id} value={k.id}>{k.ad}</option>)}
                       </select>
-                    </div>
-                    <div className="row g-3 mb-3">
-                      <div className="col-6">
-                        <label className="form-label">Başlangıç</label>
-                        <input type="date" className="form-control" required value={form.baslangicTarihi}
-                          onChange={e => setForm(f => ({ ...f, baslangicTarihi: e.target.value }))} />
-                      </div>
-                      <div className="col-6">
-                        <label className="form-label">Bitiş</label>
-                        <input type="date" className="form-control" required value={form.bitisTarihi}
-                          onChange={e => setForm(f => ({ ...f, bitisTarihi: e.target.value }))} />
-                      </div>
                     </div>
                     <div className="mb-3">
                       <label className="form-label">Günlük Fiyat (₺)</label>

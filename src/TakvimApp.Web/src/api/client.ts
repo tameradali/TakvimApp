@@ -246,6 +246,7 @@ export interface KurumAyDetay {
   ay: number
   gunSayisi: number
   toplamGelir: number
+  planlananGun: number
 }
 
 export interface KurumYillikRapor {
@@ -253,6 +254,7 @@ export interface KurumYillikRapor {
   kurumAdi: string
   toplamGun: number
   toplamGelir: number
+  planlananToplamGun: number
   aylar: KurumAyDetay[]
 }
 
