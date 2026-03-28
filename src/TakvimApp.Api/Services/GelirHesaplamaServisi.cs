@@ -40,13 +40,15 @@ public class GelirHesaplamaServisi
         {
             if (e.GunlukFiyat is null || e.GunlukFiyat <= 0) continue;
 
+            // iCal DTEND exclusive olduğu için BitisTarihi = son günün ertesi günü.
+            // effectiveEnd hesaplamasında +1 eklenmez; bugün dahil etmek için cap = bugun+1.
             var effectiveStart = e.BaslangicTarihi.Date > ayBaslangici ? e.BaslangicTarihi.Date : ayBaslangici;
-            var effectiveEnd   = e.BitisTarihi.Date < ayBitisi ? e.BitisTarihi.Date : ayBitisi;
-            effectiveEnd       = effectiveEnd < bugun ? effectiveEnd : bugun;
+            var effectiveEnd   = e.BitisTarihi.Date < ayBitisi.AddDays(1) ? e.BitisTarihi.Date : ayBitisi.AddDays(1);
+            effectiveEnd       = effectiveEnd <= bugun ? effectiveEnd : bugun.AddDays(1);
 
-            if (effectiveEnd < effectiveStart) continue;
+            if (effectiveEnd <= effectiveStart) continue;
 
-            var gunSayisi  = (effectiveEnd - effectiveStart).Days + 1;
+            var gunSayisi  = (effectiveEnd - effectiveStart).Days;
             var masraf     = e.Masraf ?? 0m;
             var toplam     = gunSayisi * e.GunlukFiyat.Value + masraf;
 
