@@ -40,6 +40,48 @@ public class EgitimEtkinligiController(
         return NoContent();
     }
 
+    [HttpPost]
+    public async Task<IActionResult> EkleManuel([FromBody] ManuelEtkinlikRequest req)
+    {
+        var etkinlik = new TakvimApp.Domain.Entities.EgitimEtkinligi
+        {
+            Baslik          = req.Baslik,
+            BaslangicTarihi = req.BaslangicTarihi,
+            BitisTarihi     = req.BitisTarihi,
+            GunlukFiyat     = req.GunlukFiyat,
+            EtkinlikTuru    = req.EtkinlikTuru ?? "Egitim",
+            EgitimTipi      = req.EgitimTipi,
+            Masraf          = req.Masraf,
+            KurumId         = req.KurumId,
+        };
+        var id = await repo.EkleManuelAsync(etkinlik, aktifKullanici.KullaniciId);
+        return Ok(new { id });
+    }
+
+    [HttpPut("{id}")]
+    public async Task<IActionResult> TamGuncelle(int id, [FromBody] ManuelEtkinlikRequest req)
+    {
+        await repo.TamGuncelleAsync(id, req.Baslik, req.BaslangicTarihi, req.BitisTarihi,
+            req.GunlukFiyat, req.EtkinlikTuru ?? "Egitim", req.EgitimTipi, req.Masraf, req.KurumId);
+        return NoContent();
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> Sil(int id)
+    {
+        await repo.SilAsync(id, aktifKullanici.KullaniciId);
+        return NoContent();
+    }
+
     public record FiyatGuncelleRequest(decimal? GunlukFiyat);
     public record BilgiGuncelleRequest(decimal? GunlukFiyat, string EtkinlikTuru, string? EgitimTipi, decimal? Masraf, int? KurumId);
+    public record ManuelEtkinlikRequest(
+        string   Baslik,
+        DateTime BaslangicTarihi,
+        DateTime BitisTarihi,
+        decimal? GunlukFiyat,
+        string?  EtkinlikTuru,
+        string?  EgitimTipi,
+        decimal? Masraf,
+        int?     KurumId);
 }

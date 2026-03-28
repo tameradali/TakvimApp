@@ -10,6 +10,7 @@ import { BeklenenEgitimler } from './pages/BeklenenEgitimler'
 import { Ayarlar } from './pages/Ayarlar'
 import { AdminPanel } from './pages/AdminPanel'
 import { Raporlar } from './pages/Raporlar'
+import { HizliGiris } from './pages/HizliGiris'
 import { ReactNode } from 'react'
 import './index.css'
 
@@ -39,6 +40,7 @@ export default function App() {
             <Route path="gelir" element={<Gelir />} />
             <Route path="raporlar" element={<Raporlar />} />
             <Route path="beklenen" element={<BeklenenEgitimler />} />
+            <Route path="hizli-giris" element={<HizliGiris />} />
             <Route path="ayarlar" element={<Ayarlar />} />
             <Route path="admin" element={<AdminRoute><AdminPanel /></AdminRoute>} />
           </Route>

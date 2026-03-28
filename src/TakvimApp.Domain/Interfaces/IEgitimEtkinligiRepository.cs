@@ -10,4 +10,7 @@ public interface IEgitimEtkinligiRepository
     Task FiyatGuncelleAsync(int id, decimal? gunlukFiyat);
     Task EtkinlikBilgiGuncelleAsync(int id, decimal? gunlukFiyat, string etkinlikTuru, string? egitimTipi, decimal? masraf, int? kurumId);
     Task HesabaGoreTemizleAsync(int hesapId);
+    Task<int> EkleManuelAsync(EgitimEtkinligi etkinlik, int kullaniciId);
+    Task TamGuncelleAsync(int id, string baslik, DateTime baslangicTarihi, DateTime bitisTarihi, decimal? gunlukFiyat, string etkinlikTuru, string? egitimTipi, decimal? masraf, int? kurumId);
+    Task SilAsync(int id, int kullaniciId);
 }

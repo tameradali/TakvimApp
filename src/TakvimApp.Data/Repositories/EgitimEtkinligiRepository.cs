@@ -130,4 +130,80 @@ public class EgitimEtkinligiRepository(VeritabaniYonetici db) : IEgitimEtkinligi
         komut.Parameters.AddWithValue("@hesapId", hesapId);
         await komut.ExecuteNonQueryAsync();
     }
+
+    public async Task<int> EkleManuelAsync(EgitimEtkinligi e, int kullaniciId)
+    {
+        // First get the user's first HesapId
+        int hesapId;
+        using (var bag1 = db.BaglantiAc())
+        {
+            using var cmd1 = bag1.CreateCommand();
+            cmd1.CommandText = "SELECT Id FROM GoogleTakvimHesaplari WHERE KullaniciId = @kid ORDER BY Id LIMIT 1";
+            cmd1.Parameters.AddWithValue("@kid", kullaniciId);
+            var result = await cmd1.ExecuteScalarAsync();
+            if (result is null) throw new InvalidOperationException("Önce bir Google Takvim hesabı ekleyin.");
+            hesapId = (int)result;
+        }
+        using var bag = db.BaglantiAc();
+        using var cmd = bag.CreateCommand();
+        cmd.CommandText = @"
+            INSERT INTO EgitimEtkinlikleri
+                (HesapId, GoogleEtkinlikId, Baslik, BaslangicTarihi, BitisTarihi,
+                 GunlukFiyat, EtkinlikTuru, EgitimTipi, Masraf, KurumId)
+            VALUES (@hesapId, @gid, @baslik, @bs, @bt,
+                    @fiyat, @tur, @tip, @masraf, @kurumId)
+            RETURNING Id";
+        cmd.Parameters.AddWithValue("@hesapId", hesapId);
+        cmd.Parameters.AddWithValue("@gid",     $"manual-{Guid.NewGuid():N}");
+        cmd.Parameters.AddWithValue("@baslik",  e.Baslik);
+        cmd.Parameters.AddWithValue("@bs",      e.BaslangicTarihi);
+        cmd.Parameters.AddWithValue("@bt",      e.BitisTarihi);
+        cmd.Parameters.AddWithValue("@fiyat",   (object?)e.GunlukFiyat ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@tur",     e.EtkinlikTuru);
+        cmd.Parameters.AddWithValue("@tip",     (object?)e.EgitimTipi  ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@masraf",  (object?)e.Masraf      ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@kurumId", (object?)e.KurumId     ?? DBNull.Value);
+        return (int)(await cmd.ExecuteScalarAsync())!;
+    }
+
+    public async Task TamGuncelleAsync(int id, string baslik, DateTime bs, DateTime bt,
+        decimal? gunlukFiyat, string etkinlikTuru, string? egitimTipi, decimal? masraf, int? kurumId)
+    {
+        using var bag = db.BaglantiAc();
+        using var cmd = bag.CreateCommand();
+        cmd.CommandText = @"
+            UPDATE EgitimEtkinlikleri
+            SET Baslik          = @baslik,
+                BaslangicTarihi = @bs,
+                BitisTarihi     = @bt,
+                GunlukFiyat     = @fiyat,
+                EtkinlikTuru    = @tur,
+                EgitimTipi      = @tip,
+                Masraf          = @masraf,
+                KurumId         = @kurumId
+            WHERE Id = @id";
+        cmd.Parameters.AddWithValue("@baslik",  baslik);
+        cmd.Parameters.AddWithValue("@bs",      bs);
+        cmd.Parameters.AddWithValue("@bt",      bt);
+        cmd.Parameters.AddWithValue("@fiyat",   (object?)gunlukFiyat ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@tur",     etkinlikTuru);
+        cmd.Parameters.AddWithValue("@tip",     (object?)egitimTipi  ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@masraf",  (object?)masraf      ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@kurumId", (object?)kurumId     ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@id",      id);
+        await cmd.ExecuteNonQueryAsync();
+    }
+
+    public async Task SilAsync(int id, int kullaniciId)
+    {
+        using var bag = db.BaglantiAc();
+        using var cmd = bag.CreateCommand();
+        cmd.CommandText = @"
+            DELETE FROM EgitimEtkinlikleri e
+            USING GoogleTakvimHesaplari h
+            WHERE e.Id = @id AND e.HesapId = h.Id AND h.KullaniciId = @kid";
+        cmd.Parameters.AddWithValue("@id",  id);
+        cmd.Parameters.AddWithValue("@kid", kullaniciId);
+        await cmd.ExecuteNonQueryAsync();
+    }
 }

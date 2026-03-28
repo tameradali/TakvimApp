@@ -338,3 +338,37 @@ export async function deleteKurum(id: number): Promise<void> {
   const r = await apiFetch(`/api/kurumlar/${id}`, { method: 'DELETE' })
   if (!r.ok) throw new Error('Kurum silinemedi')
 }
+
+// ── Eğitim Etkinlikleri (tümü + CRUD) ────────────────────────────────────────
+export async function getEgitimEtkinlikleriTumu(): Promise<EgitimEtkinligi[]> {
+  const r = await apiFetch('/api/egitim-etkinlikleri')
+  if (!r.ok) throw new Error('Etkinlikler alınamadı')
+  return r.json()
+}
+
+export interface HizliGirisRow {
+  baslik: string
+  baslangicTarihi: string
+  bitisTarihi: string
+  gunlukFiyat: number | null
+  etkinlikTuru: string
+  egitimTipi: string | null
+  masraf: number | null
+  kurumId: number | null
+}
+
+export async function postEgitimEtkinligi(data: HizliGirisRow): Promise<{ id: number }> {
+  const r = await apiFetch('/api/egitim-etkinlikleri', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
+  if (!r.ok) throw new Error('Eklenemedi')
+  return r.json()
+}
+
+export async function putEgitimEtkinligi(id: number, data: HizliGirisRow): Promise<void> {
+  const r = await apiFetch(`/api/egitim-etkinlikleri/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
+  if (!r.ok) throw new Error('Güncellenemedi')
+}
+
+export async function deleteEgitimEtkinligi(id: number): Promise<void> {
+  const r = await apiFetch(`/api/egitim-etkinlikleri/${id}`, { method: 'DELETE' })
+  if (!r.ok) throw new Error('Silinemedi')
+}
