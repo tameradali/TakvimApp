@@ -109,8 +109,10 @@ export function Ayarlar() {
         ) : hesaplar.length === 0 ? (
           <div className="card-body text-center py-4">
             <i className="ri ri-calendar-line ri-48px text-muted" />
-            <p className="text-muted mt-2 mb-1">Henüz takvim eklenmedi.</p>
-            <p className="text-muted small mb-0">Google Calendar'dan iCal URL kopyalayıp ekleyin.</p>
+            <p className="text-muted mt-2 mb-3">Henüz takvim eklenmedi.</p>
+            <button className="btn btn-primary" onClick={modalAcYeni}>
+              <i className="ri ri-add-line me-1" />Takvim Ekle
+            </button>
           </div>
         ) : (
           <div className="table-responsive">

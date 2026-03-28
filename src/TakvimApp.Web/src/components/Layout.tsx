@@ -26,7 +26,7 @@ export function Layout() {
       <div className="layout-container">
         <Sidebar open={sidebarOpen} onClose={closeMenu} />
 
-        <div className="layout-page">
+        <div className="layout-page" style={{ marginLeft: 260, minHeight: '100vh' }}>
           <Navbar onMenuToggle={toggleMenu} />
 
           <div className="content-wrapper">
