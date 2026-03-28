@@ -95,9 +95,10 @@ interface TakvimWidgetProps {
   etkinlikler: TakvimEtkinlik[]
   onDatesSet?: (start: Date, end: Date) => void
   onSelectEvent?: (event: TakvimEtkinlik) => void
+  isMobile?: boolean
 }
 
-export function TakvimWidget({ etkinlikler, onDatesSet, onSelectEvent }: TakvimWidgetProps) {
+export function TakvimWidget({ etkinlikler, onDatesSet, onSelectEvent, isMobile }: TakvimWidgetProps) {
   const fcEvents: FCEvent[] = etkinlikler.flatMap(etkinligiDonustur)
 
   function handleEventClick(arg: EventClickArg) {
@@ -122,11 +123,15 @@ export function TakvimWidget({ etkinlikler, onDatesSet, onSelectEvent }: TakvimW
   return (
     <FullCalendar
       plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
-      initialView="dayGridMonth"
-      headerToolbar={{
+      initialView={isMobile ? 'listMonth' : 'dayGridMonth'}
+      headerToolbar={isMobile ? {
+        left: 'prev,next',
+        center: 'title',
+        right: 'dayGridMonth,listMonth',
+      } : {
         left: 'prev,next today',
         center: 'title',
-        right: 'dayGridMonth,timeGridWeek,timeGridDay,listMonth',
+        right: 'dayGridMonth,timeGridWeek,listMonth',
       }}
       buttonText={{ today: 'Bugün', month: 'Ay', week: 'Hafta', day: 'Gün', list: 'Liste' }}
       locale="tr"
@@ -134,10 +139,10 @@ export function TakvimWidget({ etkinlikler, onDatesSet, onSelectEvent }: TakvimW
       eventClick={handleEventClick}
       datesSet={handleDatesSet}
       eventContent={renderEventContent}
-      height={680}
+      height={isMobile ? 'auto' : 680}
       firstDay={1}
-      dayMaxEvents={3}
-      moreLinkText={(n) => `+${n} daha`}
+      dayMaxEvents={isMobile ? 2 : 3}
+      moreLinkText={(n) => `+${n}`}
     />
   )
 }

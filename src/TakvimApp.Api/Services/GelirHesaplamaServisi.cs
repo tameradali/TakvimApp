@@ -49,7 +49,7 @@ public class GelirHesaplamaServisi
             if (effectiveEnd <= effectiveStart) continue;
 
             var gunSayisi  = (effectiveEnd - effectiveStart).Days;
-            var masraf     = e.Masraf ?? 0m;
+            var masraf     = (e.Masraf ?? 0m) * gunSayisi;   // masraf gün bazlı
             var toplam     = gunSayisi * e.GunlukFiyat.Value + masraf;
 
             etkinlikKalemleri.Add(new EtkinlikGelirKalemi(

@@ -43,3 +43,56 @@
 .layout-menu-toggle {
   display: inline-flex !important;
 }
+
+/* ── Takvim sayfası responsive layout ─────────────────────────────────────── */
+.takvim-sol-panel {
+  width: 240px;
+  flex-shrink: 0;
+}
+.takvim-ana {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 767px) {
+  .takvim-sol-panel {
+    width: 100% !important;
+  }
+  .takvim-ana {
+    width: 100%;
+  }
+
+  /* FullCalendar toolbar küçük ekranda sığdır */
+  .fc .fc-toolbar {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .fc .fc-toolbar-title {
+    font-size: 1rem !important;
+  }
+  .fc .fc-button {
+    padding: 0.3rem 0.5rem !important;
+    font-size: 0.78rem !important;
+  }
+  .fc .fc-button-group .fc-button {
+    padding: 0.3rem 0.5rem !important;
+  }
+  /* Hücre başlıkları (Mon, Tue ...) küçült */
+  .fc .fc-col-header-cell-cushion {
+    font-size: 0.72rem;
+    padding: 4px 2px;
+  }
+  /* Gün numaraları */
+  .fc .fc-daygrid-day-number {
+    font-size: 0.75rem;
+    padding: 2px 4px;
+  }
+  /* Etkinlik satırları */
+  .fc-event-title {
+    font-size: 0.7rem !important;
+  }
+  /* Kart padding azalt */
+  .fc .fc-daygrid-day-frame {
+    min-height: 40px;
+  }
+}
