@@ -27,3 +27,19 @@
     z-index: 1040;
   }
 }
+
+/* Navbar ezme düzeltmesi — tüm sayfalarda içerik navbar'ın altından başlar */
+.layout-navbar {
+  position: sticky !important;
+  top: 0;
+  z-index: 1000;
+}
+
+.content-wrapper .container-xxl {
+  padding-top: 1.5rem !important;
+}
+
+/* Sidebar mobilde hamburger butonunu her zaman göster */
+.layout-menu-toggle {
+  display: inline-flex !important;
+}
