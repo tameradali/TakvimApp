@@ -17,7 +17,7 @@ interface MenuItem {
 
 const menuItems: MenuItem[] = [
   { to: '/app',              icon: 'ri-calendar-2-line',          label: 'Takvim' },
-  { to: '/app/hizli-giris',  icon: 'ri-table-line',               label: 'Hızlı Giriş', group: 'GİRİŞ' },
+  { to: '/app/hizli-giris',  icon: 'ri-table-line',               label: 'Hızlı Güncelleme', group: 'GİRİŞ' },
   { to: '/app/gelir',        icon: 'ri-money-dollar-circle-line', label: 'Gelir', group: 'ANALİZ' },
   { to: '/app/raporlar',  icon: 'ri-bar-chart-grouped-line',   label: 'Raporlar' },
   { to: '/app/beklenen',  icon: 'ri-calendar-todo-line',       label: 'Beklenen Eğitimler' },
