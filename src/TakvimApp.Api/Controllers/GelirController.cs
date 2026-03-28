@@ -52,12 +52,17 @@ public class GelirController(
     public async Task<IActionResult> KurumBazliRapor([FromQuery] int yil)
     {
         var dict  = new Dictionary<string, KurumData>();
-        var bugun = DateTime.UtcNow.Date;
-        var yarin = bugun.AddDays(1);
 
         // Kurum renkleri için lookup
         var kurumlar   = await kurumRepo.TumunuGetirAsync(aktifKullanici.KullaniciId);
         var renkLookup = kurumlar.ToDictionary(k => k.Id.ToString(), k => k.Renk);
+
+        // Tüm kurumları dict'e baştan ekle (veri olmasa bile raporlarda görünsün)
+        foreach (var k in kurumlar)
+        {
+            var key = k.Id.ToString();
+            EnsureData(dict, key, k.Id, k.Ad, renkLookup);
+        }
 
         // Gerçekleşen + Planlanan (aylık döngü)
         for (int ay = 1; ay <= 12; ay++)
@@ -77,21 +82,14 @@ public class GelirController(
                 dict[key].AyGelirler[ay - 1] += k.ToplamGelir;
             }
 
-            // Planlanan (gelecek günler, Toplantı hariç)
-            foreach (var e in etkinlikler.Where(e => e.EtkinlikTuru != "Toplanti"))
+            // Planlanan — servis sonucunu kullan (Gelir sayfasıyla tutarlı hesap)
+            foreach (var k in sonuc.PlanlananDetaylari)
             {
-                var plStart = e.BaslangicTarihi.Date;
-                if (plStart < ayBaslangici) plStart = ayBaslangici;
-                if (plStart < yarin)        plStart = yarin;
-                var plEnd = e.BitisTarihi.Date < ayBitisi.AddDays(1) ? e.BitisTarihi.Date : ayBitisi.AddDays(1);
-                if (plEnd <= plStart) continue;
-                var gunSayisi = (plEnd - plStart).Days;
-                if (gunSayisi <= 0) continue;
-
-                var key = GetKey(e.KurumId);
-                EnsureData(dict, key, e.KurumId, e.KurumAdi, renkLookup);
-                dict[key].AyPlanlananGunler[ay - 1]  += gunSayisi;
-                dict[key].AyPlanlananGelirler[ay - 1] += gunSayisi * (e.GunlukFiyat ?? 0m);
+                if (k.PlanlananGunSayisi <= 0) continue;
+                var key = GetKey(k.KurumId);
+                EnsureData(dict, key, k.KurumId, k.KurumAdi, renkLookup);
+                dict[key].AyPlanlananGunler[ay - 1]   += k.PlanlananGunSayisi;
+                dict[key].AyPlanlananGelirler[ay - 1] += k.ToplamGelir;
             }
         }
 
@@ -110,7 +108,7 @@ public class GelirController(
         }
 
         var sonuclar = dict.Values
-            .OrderByDescending(d => d.ToplamGelir + d.BeklenenGelir)
+            .OrderByDescending(d => d.ToplamGelir + d.PlanlananToplamGelir + d.BeklenenGelir)
             .Select(d => new
             {
                 kurumId              = d.KurumId,
