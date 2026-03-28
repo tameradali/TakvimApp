@@ -70,6 +70,8 @@ export interface BeklenenEgitim {
   bitisTarihi: string
   gunlukFiyat: number
   notlar: string | null
+  kurumId: number | null
+  kurumAdi: string | null
 }
 
 export interface EtkinlikGelirKalemi {
@@ -89,6 +91,8 @@ export interface BeklenenGelirKalemi {
   toplamGunSayisi: number
   gunlukFiyat: number
   toplamGelir: number
+  kurumId?: number | null
+  kurumAdi?: string | null
 }
 
 export interface AylikGelir {
@@ -113,6 +117,8 @@ export interface Kurum {
   kullaniciId: number
   ad: string
   notlar: string | null
+  renk: string | null
+  logo: string | null
 }
 
 // ── Google Takvim Hesapları ───────────────────────────────────────────────────
@@ -294,7 +300,7 @@ export async function getKurumlar(): Promise<Kurum[]> {
   return r.json()
 }
 
-export async function postKurum(dto: { ad: string; notlar: string | null }): Promise<{ id: number }> {
+export async function postKurum(dto: { ad: string; notlar: string | null; renk: string | null; logo: string | null }): Promise<{ id: number }> {
   const r = await apiFetch('/api/kurumlar', {
     method: 'POST', body: JSON.stringify(dto),
   })
@@ -302,7 +308,7 @@ export async function postKurum(dto: { ad: string; notlar: string | null }): Pro
   return r.json()
 }
 
-export async function putKurum(id: number, dto: { ad: string; notlar: string | null }): Promise<void> {
+export async function putKurum(id: number, dto: { ad: string; notlar: string | null; renk: string | null; logo: string | null }): Promise<void> {
   const r = await apiFetch(`/api/kurumlar/${id}`, {
     method: 'PUT', body: JSON.stringify(dto),
   })

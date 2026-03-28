@@ -65,6 +65,32 @@ public class VeritabaniYonetici
             }
         }
 
+        // Migrasyon 4: Kurumlar — Renk ve Logo kolonları
+        {
+            if (!KolonVarMi(baglanti, "kurumlar", "renk"))
+            {
+                using var mig = baglanti.CreateCommand();
+                mig.CommandText = "ALTER TABLE Kurumlar ADD COLUMN IF NOT EXISTS Renk TEXT";
+                mig.ExecuteNonQuery();
+            }
+            if (!KolonVarMi(baglanti, "kurumlar", "logo"))
+            {
+                using var mig = baglanti.CreateCommand();
+                mig.CommandText = "ALTER TABLE Kurumlar ADD COLUMN IF NOT EXISTS Logo TEXT";
+                mig.ExecuteNonQuery();
+            }
+        }
+
+        // Migrasyon 5: BeklenenEgitimler — KurumId kolonu
+        {
+            if (!KolonVarMi(baglanti, "beklenenEgitimler", "kurumid"))
+            {
+                using var mig = baglanti.CreateCommand();
+                mig.CommandText = "ALTER TABLE BeklenenEgitimler ADD COLUMN IF NOT EXISTS KurumId INTEGER REFERENCES Kurumlar(Id) ON DELETE SET NULL";
+                mig.ExecuteNonQuery();
+            }
+        }
+
         // Migrasyon 2: EgitimEtkinlikleri yeni alanlar
         {
             if (!KolonVarMi(baglanti, "egitimetkinlikleri", "yer"))

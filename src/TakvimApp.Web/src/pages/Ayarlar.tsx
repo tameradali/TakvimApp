@@ -26,6 +26,7 @@ export function Ayarlar() {
   const [duzenlenenKurumId, setDuzenlenenKurumId] = useState<number | null>(null)
   const [kurumAd, setKurumAd] = useState('')
   const [kurumNotlar, setKurumNotlar] = useState('')
+  const [kurumRenk, setKurumRenk] = useState('#696cff')
   const [kurumKayitLoading, setKurumKayitLoading] = useState(false)
 
   function takvimYukle() {
@@ -89,19 +90,20 @@ export function Ayarlar() {
 
   // Kurum handlers
   function kurumModalAcYeni() {
-    setDuzenlenenKurumId(null); setKurumAd(''); setKurumNotlar('')
+    setDuzenlenenKurumId(null); setKurumAd(''); setKurumNotlar(''); setKurumRenk('#696cff')
     setKurumModalAcik(true)
   }
 
   function kurumModalAcDuzenle(k: Kurum) {
     setDuzenlenenKurumId(k.id); setKurumAd(k.ad); setKurumNotlar(k.notlar ?? '')
+    setKurumRenk(k.renk ?? '#696cff')
     setKurumModalAcik(true)
   }
 
   async function handleKurumKaydet(e: FormEvent) {
     e.preventDefault(); setKurumKayitLoading(true)
     try {
-      const dto = { ad: kurumAd, notlar: kurumNotlar || null }
+      const dto = { ad: kurumAd, notlar: kurumNotlar || null, renk: kurumRenk || null, logo: null }
       if (duzenlenenKurumId) {
         await putKurum(duzenlenenKurumId, dto)
       } else {
@@ -226,11 +228,16 @@ export function Ayarlar() {
         ) : (
           <div className="table-responsive">
             <table className="table table-hover mb-0">
-              <thead><tr><th>Kurum Adı</th><th>Notlar</th><th></th></tr></thead>
+              <thead><tr><th>Kurum Adı</th><th>Renk</th><th>Notlar</th><th></th></tr></thead>
               <tbody>
                 {kurumlar.map(k => (
                   <tr key={k.id}>
                     <td><strong>{k.ad}</strong></td>
+                    <td>
+                      {k.renk
+                        ? <span style={{ display: 'inline-block', width: 18, height: 18, borderRadius: 4, backgroundColor: k.renk, border: '1px solid rgba(0,0,0,.15)', verticalAlign: 'middle' }} title={k.renk} />
+                        : <span className="text-muted small">—</span>}
+                    </td>
                     <td className="text-muted small">{k.notlar ?? '—'}</td>
                     <td>
                       <div className="d-flex gap-1">
@@ -313,6 +320,15 @@ export function Ayarlar() {
                       <label className="form-label">Kurum Adı</label>
                       <input className="form-control" required placeholder="ör: ABC Şirketi"
                         value={kurumAd} onChange={e => setKurumAd(e.target.value)} />
+                    </div>
+                    <div className="mb-3">
+                      <label className="form-label">Renk <span className="text-muted">(opsiyonel)</span></label>
+                      <div className="d-flex align-items-center gap-2">
+                        <input type="color" className="form-control form-control-color"
+                          value={kurumRenk} onChange={e => setKurumRenk(e.target.value)} style={{ width: 48, padding: 2 }} />
+                        <input type="text" className="form-control form-control-sm" placeholder="#696cff"
+                          value={kurumRenk} onChange={e => setKurumRenk(e.target.value)} style={{ maxWidth: 100 }} />
+                      </div>
                     </div>
                     <div className="mb-3">
                       <label className="form-label">Notlar <span className="text-muted">(opsiyonel)</span></label>

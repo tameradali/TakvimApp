@@ -28,6 +28,8 @@ public class KurumController(
             KullaniciId = aktifKullanici.KullaniciId,
             Ad          = req.Ad,
             Notlar      = req.Notlar,
+            Renk        = req.Renk,
+            Logo        = req.Logo,
         };
         var id = await repo.EkleAsync(kurum);
         return Ok(new { id });
@@ -42,6 +44,8 @@ public class KurumController(
             KullaniciId = aktifKullanici.KullaniciId,
             Ad          = req.Ad,
             Notlar      = req.Notlar,
+            Renk        = req.Renk,
+            Logo        = req.Logo,
         };
         await repo.GuncelleAsync(kurum);
         return NoContent();
@@ -54,5 +58,5 @@ public class KurumController(
         return NoContent();
     }
 
-    public record KurumRequest(string Ad, string? Notlar);
+    public record KurumRequest(string Ad, string? Notlar, string? Renk, string? Logo);
 }

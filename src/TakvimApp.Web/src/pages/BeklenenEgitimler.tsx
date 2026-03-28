@@ -1,6 +1,9 @@
 import { useEffect, useState, FormEvent } from 'react'
-import { getBeklenenEgitimler, postBeklenenEgitim, putBeklenenEgitim, deleteBeklenenEgitim } from '../api/client'
-import type { BeklenenEgitim } from '../api/client'
+import {
+  getBeklenenEgitimler, postBeklenenEgitim, putBeklenenEgitim, deleteBeklenenEgitim,
+  getKurumlar,
+} from '../api/client'
+import type { BeklenenEgitim, Kurum } from '../api/client'
 
 interface FormState {
   baslik: string
@@ -8,19 +11,24 @@ interface FormState {
   bitisTarihi: string
   gunlukFiyat: string
   notlar: string
+  kurumId: string
 }
 
-const bos: FormState = { baslik: '', baslangicTarihi: '', bitisTarihi: '', gunlukFiyat: '', notlar: '' }
+const bos: FormState = {
+  baslik: '', baslangicTarihi: '', bitisTarihi: '',
+  gunlukFiyat: '', notlar: '', kurumId: '',
+}
 
 function toDateInput(iso: string) { return iso.split('T')[0] }
 
 export function BeklenenEgitimler() {
-  const [liste, setListe] = useState<BeklenenEgitim[]>([])
-  const [loading, setLoading] = useState(false)
-  const [hata, setHata] = useState<string | null>(null)
-  const [modalAcik, setModalAcik] = useState(false)
-  const [duzenlenen, setDuzenlenen] = useState<BeklenenEgitim | null>(null)
-  const [form, setForm] = useState<FormState>(bos)
+  const [liste, setListe]               = useState<BeklenenEgitim[]>([])
+  const [kurumlar, setKurumlar]         = useState<Kurum[]>([])
+  const [loading, setLoading]           = useState(false)
+  const [hata, setHata]                 = useState<string | null>(null)
+  const [modalAcik, setModalAcik]       = useState(false)
+  const [duzenlenen, setDuzenlenen]     = useState<BeklenenEgitim | null>(null)
+  const [form, setForm]                 = useState<FormState>(bos)
   const [kayitLoading, setKayitLoading] = useState(false)
 
   function yukle() {
@@ -31,7 +39,10 @@ export function BeklenenEgitimler() {
       .finally(() => setLoading(false))
   }
 
-  useEffect(() => { yukle() }, [])
+  useEffect(() => {
+    yukle()
+    getKurumlar().then(setKurumlar).catch(() => {})
+  }, [])
 
   function modalAc(egitim?: BeklenenEgitim) {
     if (egitim) {
@@ -42,6 +53,7 @@ export function BeklenenEgitimler() {
         bitisTarihi:     toDateInput(egitim.bitisTarihi),
         gunlukFiyat:     String(egitim.gunlukFiyat),
         notlar:          egitim.notlar ?? '',
+        kurumId:         egitim.kurumId ? String(egitim.kurumId) : '',
       })
     } else {
       setDuzenlenen(null)
@@ -55,15 +67,17 @@ export function BeklenenEgitimler() {
     setKayitLoading(true)
     try {
       const dto = {
-        baslik:          form.baslik,
-        baslangicTarihi: new Date(form.baslangicTarihi).toISOString(),
-        bitisTarihi:     new Date(form.bitisTarihi).toISOString(),
-        gunlukFiyat:     parseFloat(form.gunlukFiyat),
-        notlar:          form.notlar || null,
+        baslik:            form.baslik,
+        baslangicTarihi:   new Date(form.baslangicTarihi).toISOString(),
+        bitisTarihi:       new Date(form.bitisTarihi).toISOString(),
+        gunlukFiyat:       parseFloat(form.gunlukFiyat),
+        notlar:            form.notlar || null,
+        kurumId:           form.kurumId ? parseInt(form.kurumId) : null,
         olusturulmaTarihi: new Date().toISOString(),
+        kurumAdi:          null,
       }
       if (duzenlenen) await putBeklenenEgitim(duzenlenen.id, dto)
-      else await postBeklenenEgitim(dto)
+      else            await postBeklenenEgitim(dto)
       setModalAcik(false)
       yukle()
     } catch (err: unknown) {
@@ -111,6 +125,7 @@ export function BeklenenEgitimler() {
               <thead>
                 <tr>
                   <th>Başlık</th>
+                  <th>Kurum</th>
                   <th>Başlangıç</th>
                   <th>Bitiş</th>
                   <th>Günlük Fiyat</th>
@@ -122,6 +137,7 @@ export function BeklenenEgitimler() {
                 {liste.map(e => (
                   <tr key={e.id}>
                     <td><strong>{e.baslik}</strong></td>
+                    <td className="text-muted small">{e.kurumAdi ?? '—'}</td>
                     <td>{new Date(e.baslangicTarihi).toLocaleDateString('tr-TR')}</td>
                     <td>{new Date(e.bitisTarihi).toLocaleDateString('tr-TR')}</td>
                     <td>{e.gunlukFiyat.toLocaleString('tr-TR')} ₺</td>
@@ -162,6 +178,14 @@ export function BeklenenEgitimler() {
                       <input className="form-control" required value={form.baslik}
                         onChange={e => setForm(f => ({ ...f, baslik: e.target.value }))} />
                     </div>
+                    <div className="mb-3">
+                      <label className="form-label">Kurum <span className="text-muted">(opsiyonel)</span></label>
+                      <select className="form-select" value={form.kurumId}
+                        onChange={e => setForm(f => ({ ...f, kurumId: e.target.value }))}>
+                        <option value="">— Seçiniz —</option>
+                        {kurumlar.map(k => <option key={k.id} value={k.id}>{k.ad}</option>)}
+                      </select>
+                    </div>
                     <div className="row g-3 mb-3">
                       <div className="col-6">
                         <label className="form-label">Başlangıç</label>
@@ -181,7 +205,7 @@ export function BeklenenEgitimler() {
                         onChange={e => setForm(f => ({ ...f, gunlukFiyat: e.target.value }))} />
                     </div>
                     <div className="mb-3">
-                      <label className="form-label">Notlar (isteğe bağlı)</label>
+                      <label className="form-label">Notlar <span className="text-muted">(opsiyonel)</span></label>
                       <textarea className="form-control" rows={2} value={form.notlar}
                         onChange={e => setForm(f => ({ ...f, notlar: e.target.value }))} />
                     </div>

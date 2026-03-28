@@ -10,4 +10,7 @@ public class BeklenenEgitim
     public decimal  GunlukFiyat     { get; set; }
     public string?  Notlar          { get; set; }
     public DateTime OlusturulmaTarihi { get; set; }
+    public int?     KurumId         { get; set; }
+    /// <summary>JOIN'den gelir — yazılmaz</summary>
+    public string?  KurumAdi        { get; set; }
 }

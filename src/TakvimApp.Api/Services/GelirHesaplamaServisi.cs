@@ -19,7 +19,9 @@ public class GelirHesaplamaServisi
         string  Baslik,
         int     ToplamGunSayisi,
         decimal GunlukFiyat,
-        decimal ToplamGelir);
+        decimal ToplamGelir,
+        int?    KurumId,
+        string? KurumAdi);
 
     public record AylikGelirSonucu(
         int Ay,
@@ -71,7 +73,8 @@ public class GelirHesaplamaServisi
             var toplam    = gunSayisi * b.GunlukFiyat;
 
             beklenenKalemleri.Add(new BeklenenGelirKalemi(
-                b.Id, b.Baslik, gunSayisi, b.GunlukFiyat, toplam));
+                b.Id, b.Baslik, gunSayisi, b.GunlukFiyat, toplam,
+                b.KurumId, b.KurumAdi));
         }
 
         var toplamGelir = etkinlikKalemleri.Sum(k => k.ToplamGelir)

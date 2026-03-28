@@ -16,12 +16,16 @@ public class BeklenenEgitimRepository(VeritabaniYonetici db, AktifKullaniciServi
         GunlukFiyat       = r.GetDecimal(5),
         Notlar            = r.IsDBNull(6) ? null : r.GetString(6),
         OlusturulmaTarihi = r.GetDateTime(7),
+        KurumId           = r.IsDBNull(8) ? null : r.GetInt32(8),
+        KurumAdi          = r.IsDBNull(9) ? null : r.GetString(9),
     };
 
     private const string SelectSql = @"
-        SELECT Id, KullaniciId, Baslik, BaslangicTarihi, BitisTarihi,
-               GunlukFiyat, Notlar, OlusturulmaTarihi
-        FROM BeklenenEgitimler";
+        SELECT b.Id, b.KullaniciId, b.Baslik, b.BaslangicTarihi, b.BitisTarihi,
+               b.GunlukFiyat, b.Notlar, b.OlusturulmaTarihi,
+               b.KurumId, k.Ad AS KurumAdi
+        FROM BeklenenEgitimler b
+        LEFT JOIN Kurumlar k ON b.KurumId = k.Id";
 
     public async Task<List<BeklenenEgitim>> TumunuGetirAsync(int kullaniciId)
     {
@@ -71,8 +75,8 @@ public class BeklenenEgitimRepository(VeritabaniYonetici db, AktifKullaniciServi
         using var komut    = baglanti.CreateCommand();
         komut.CommandText  = @"
             INSERT INTO BeklenenEgitimler
-                (KullaniciId, Baslik, BaslangicTarihi, BitisTarihi, GunlukFiyat, Notlar, OlusturulmaTarihi)
-            VALUES (@kid, @baslik, @bs, @bt, @fiyat, @notlar, NOW())
+                (KullaniciId, Baslik, BaslangicTarihi, BitisTarihi, GunlukFiyat, Notlar, OlusturulmaTarihi, KurumId)
+            VALUES (@kid, @baslik, @bs, @bt, @fiyat, @notlar, NOW(), @kurumId)
             RETURNING Id";
         komut.Parameters.AddWithValue("@kid",    kullanici.KullaniciId);
         komut.Parameters.AddWithValue("@baslik", egitim.Baslik);
@@ -80,6 +84,7 @@ public class BeklenenEgitimRepository(VeritabaniYonetici db, AktifKullaniciServi
         komut.Parameters.AddWithValue("@bt",     egitim.BitisTarihi);
         komut.Parameters.AddWithValue("@fiyat",  egitim.GunlukFiyat);
         komut.Parameters.AddWithValue("@notlar", (object?)egitim.Notlar ?? DBNull.Value);
+        komut.Parameters.AddWithValue("@kurumId",(object?)egitim.KurumId ?? DBNull.Value);
         return (int)(await komut.ExecuteScalarAsync())!;
     }
 

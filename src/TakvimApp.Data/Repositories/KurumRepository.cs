@@ -11,13 +11,15 @@ public class KurumRepository(VeritabaniYonetici db) : IKurumRepository
         KullaniciId = r.GetInt32(1),
         Ad          = r.GetString(2),
         Notlar      = r.IsDBNull(3) ? null : r.GetString(3),
+        Renk        = r.IsDBNull(4) ? null : r.GetString(4),
+        Logo        = r.IsDBNull(5) ? null : r.GetString(5),
     };
 
     public async Task<List<Kurum>> TumunuGetirAsync(int kullaniciId)
     {
         using var baglanti = db.BaglantiAc();
         using var komut    = baglanti.CreateCommand();
-        komut.CommandText  = "SELECT Id, KullaniciId, Ad, Notlar FROM Kurumlar WHERE KullaniciId = @kid ORDER BY Ad";
+        komut.CommandText  = "SELECT Id, KullaniciId, Ad, Notlar, Renk, Logo FROM Kurumlar WHERE KullaniciId = @kid ORDER BY Ad";
         komut.Parameters.AddWithValue("@kid", kullaniciId);
         using var r   = await komut.ExecuteReaderAsync();
         var liste     = new List<Kurum>();
@@ -30,12 +32,14 @@ public class KurumRepository(VeritabaniYonetici db) : IKurumRepository
         using var baglanti = db.BaglantiAc();
         using var komut    = baglanti.CreateCommand();
         komut.CommandText  = @"
-            INSERT INTO Kurumlar (KullaniciId, Ad, Notlar)
-            VALUES (@kid, @ad, @notlar)
+            INSERT INTO Kurumlar (KullaniciId, Ad, Notlar, Renk, Logo)
+            VALUES (@kid, @ad, @notlar, @renk, @logo)
             RETURNING Id";
         komut.Parameters.AddWithValue("@kid",    kurum.KullaniciId);
         komut.Parameters.AddWithValue("@ad",     kurum.Ad);
         komut.Parameters.AddWithValue("@notlar", (object?)kurum.Notlar ?? DBNull.Value);
+        komut.Parameters.AddWithValue("@renk",   (object?)kurum.Renk   ?? DBNull.Value);
+        komut.Parameters.AddWithValue("@logo",   (object?)kurum.Logo   ?? DBNull.Value);
         return (int)(await komut.ExecuteScalarAsync())!;
     }
 
@@ -44,10 +48,12 @@ public class KurumRepository(VeritabaniYonetici db) : IKurumRepository
         using var baglanti = db.BaglantiAc();
         using var komut    = baglanti.CreateCommand();
         komut.CommandText  = @"
-            UPDATE Kurumlar SET Ad = @ad, Notlar = @notlar
+            UPDATE Kurumlar SET Ad = @ad, Notlar = @notlar, Renk = @renk, Logo = @logo
             WHERE Id = @id AND KullaniciId = @kid";
         komut.Parameters.AddWithValue("@ad",     kurum.Ad);
         komut.Parameters.AddWithValue("@notlar", (object?)kurum.Notlar ?? DBNull.Value);
+        komut.Parameters.AddWithValue("@renk",   (object?)kurum.Renk   ?? DBNull.Value);
+        komut.Parameters.AddWithValue("@logo",   (object?)kurum.Logo   ?? DBNull.Value);
         komut.Parameters.AddWithValue("@id",     kurum.Id);
         komut.Parameters.AddWithValue("@kid",    kurum.KullaniciId);
         await komut.ExecuteNonQueryAsync();
