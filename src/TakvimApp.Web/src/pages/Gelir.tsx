@@ -40,8 +40,16 @@ export function Gelir() {
     }
   }, [ay, yil])
 
-  // Beklenenler: yıl bazlı filtre (tarayıcı local time doğru yılı verir)
-  const yilBeklenenler = beklenenListe.filter(b => new Date(b.baslangicTarihi).getFullYear() === yil)
+  // Beklenenler: yıl bazlı filtre — eski kayıtlar UTC+3 offset ile Dec 31 UTC olarak saklandığından
+  // "2025-12-31T21:00:00" (Z yok) → browser local parse → yıl 2025 görünür.
+  // Her iki durumu (Dec 31 eski + Jan 1 yeni) kapsamak için composite filtre kullanıyoruz.
+  const yilBeklenenler = beklenenListe.filter(b => {
+    const d = new Date(b.baslangicTarihi)
+    const yr = d.getFullYear()
+    const mo = d.getMonth()  // 0-indexed
+    const da = d.getDate()
+    return yr === yil || (yr === yil - 1 && mo === 11 && da === 31)
+  })
   const toplamBeklenenGun   = yilBeklenenler.reduce((s, b) => s + (b.beklenenGunSayisi ?? 1), 0)
   const toplamBeklenenGelir = yilBeklenenler.reduce((s, b) => s + (b.beklenenGunSayisi ?? 1) * b.gunlukFiyat, 0)
 

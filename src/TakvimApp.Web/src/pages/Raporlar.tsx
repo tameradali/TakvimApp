@@ -232,7 +232,14 @@ export function Raporlar() {
             <div className="col-sm-6 col-xl-3">
               <div className="card h-100"><div className="card-body">
                 <p className="text-muted small mb-1">Toplam Gelir ({yil})</p>
-                <h4 className="mb-0" style={{ color: '#696cff' }}>{fmtTl(toplamGelir)} ₺</h4>
+                <h4 className="mb-0" style={{ color: '#696cff' }}>
+                  {fmtTl(toplamGelir + (planlananDahil ? planlananToplamGelir : 0) + (beklenenDahil ? beklenenToplamGelir : 0))} ₺
+                </h4>
+                <small className="text-muted">
+                  {fmtTl(toplamGelir)} ₺ gerçekleşen
+                  {planlananDahil && planlananToplamGelir > 0 && <> + {fmtTl(planlananToplamGelir)} ₺ plan</>}
+                  {beklenenDahil  && beklenenToplamGelir  > 0 && <> + {fmtTl(beklenenToplamGelir)}  ₺ bek</>}
+                </small>
               </div></div>
             </div>
           </div>
