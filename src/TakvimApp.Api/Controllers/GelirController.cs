@@ -52,6 +52,8 @@ public class GelirController(
     public async Task<IActionResult> KurumBazliRapor([FromQuery] int yil)
     {
         var dict  = new Dictionary<string, KurumData>();
+        var bugun = DateTime.UtcNow.Date;
+        var yarin = bugun.AddDays(1);
 
         // Kurum renkleri için lookup
         var kurumlar   = await kurumRepo.TumunuGetirAsync(aktifKullanici.KullaniciId);
@@ -82,13 +84,29 @@ public class GelirController(
                 dict[key].AyGelirler[ay - 1] += k.ToplamGelir;
             }
 
-            // Planlanan — servis sonucunu kullan (Gelir sayfasıyla tutarlı hesap)
+            // Planlanan gün — tüm eğitimler (fiyatsız dahil, toplantı hariç) → frontend ile senkron
+            foreach (var e in etkinlikler.Where(e => e.EtkinlikTuru != "Toplanti"))
+            {
+                var plStart = e.BaslangicTarihi.Date > ayBaslangici ? e.BaslangicTarihi.Date : ayBaslangici;
+                if (plStart < yarin) plStart = yarin;
+                var bitisEx = e.BitisTarihi.TimeOfDay == TimeSpan.Zero
+                    ? e.BitisTarihi.Date
+                    : e.BitisTarihi.Date.AddDays(1);
+                var plEnd = bitisEx < ayBitisi.AddDays(1) ? bitisEx : ayBitisi.AddDays(1);
+                if (plEnd <= plStart) continue;
+                var gun = (plEnd - plStart).Days;
+                if (gun <= 0) continue;
+                var key = GetKey(e.KurumId);
+                EnsureData(dict, key, e.KurumId, e.KurumAdi, renkLookup);
+                dict[key].AyPlanlananGunler[ay - 1] += gun;
+            }
+
+            // Planlanan gelir — sadece fiyatlı eğitimler
             foreach (var k in sonuc.PlanlananDetaylari)
             {
                 if (k.PlanlananGunSayisi <= 0) continue;
                 var key = GetKey(k.KurumId);
                 EnsureData(dict, key, k.KurumId, k.KurumAdi, renkLookup);
-                dict[key].AyPlanlananGunler[ay - 1]   += k.PlanlananGunSayisi;
                 dict[key].AyPlanlananGelirler[ay - 1] += k.ToplamGelir;
             }
         }
