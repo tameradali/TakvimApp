@@ -33,5 +33,13 @@ public class EgitimEtkinligiController(
         return NoContent();
     }
 
+    [HttpPatch("{id}/bilgi")]
+    public async Task<IActionResult> BilgiGuncelle(int id, [FromBody] BilgiGuncelleRequest req)
+    {
+        await repo.EtkinlikBilgiGuncelleAsync(id, req.GunlukFiyat, req.EtkinlikTuru, req.EgitimTipi, req.Masraf);
+        return NoContent();
+    }
+
     public record FiyatGuncelleRequest(decimal? GunlukFiyat);
+    public record BilgiGuncelleRequest(decimal? GunlukFiyat, string EtkinlikTuru, string? EgitimTipi, decimal? Masraf);
 }

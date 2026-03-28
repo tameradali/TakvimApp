@@ -9,6 +9,7 @@ public class GelirHesaplamaServisi
         string  Baslik,
         int     TamamlananGunSayisi,
         decimal GunlukFiyat,
+        decimal Masraf,
         decimal ToplamGelir);
 
     public record BeklenenGelirKalemi(
@@ -46,10 +47,11 @@ public class GelirHesaplamaServisi
             if (effectiveEnd < effectiveStart) continue;
 
             var gunSayisi  = (effectiveEnd - effectiveStart).Days + 1;
-            var toplam     = gunSayisi * e.GunlukFiyat.Value;
+            var masraf     = e.Masraf ?? 0m;
+            var toplam     = gunSayisi * e.GunlukFiyat.Value + masraf;
 
             etkinlikKalemleri.Add(new EtkinlikGelirKalemi(
-                e.Id, e.Baslik, gunSayisi, e.GunlukFiyat.Value, toplam));
+                e.Id, e.Baslik, gunSayisi, e.GunlukFiyat.Value, masraf, toplam));
         }
 
         var beklenenKalemleri = new List<BeklenenGelirKalemi>();

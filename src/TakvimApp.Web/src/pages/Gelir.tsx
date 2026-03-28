@@ -112,7 +112,7 @@ export function Gelir() {
               <div className="table-responsive">
                 <table className="table table-hover mb-0">
                   <thead>
-                    <tr><th>Eğitim</th><th>Gün</th><th>Günlük Fiyat</th><th>Toplam</th></tr>
+                    <tr><th>Eğitim</th><th>Gün</th><th>Günlük Fiyat</th><th>Masraf</th><th>Toplam</th></tr>
                   </thead>
                   <tbody>
                     {aylik.etkinlikDetaylari.map(k => (
@@ -120,6 +120,7 @@ export function Gelir() {
                         <td>{k.baslik}</td>
                         <td>{k.tamamlananGunSayisi} gün</td>
                         <td>{k.gunlukFiyat.toLocaleString('tr-TR')} ₺</td>
+                        <td>{k.masraf > 0 ? `${k.masraf.toLocaleString('tr-TR')} ₺` : '—'}</td>
                         <td><strong>{k.toplamGelir.toLocaleString('tr-TR')} ₺</strong></td>
                       </tr>
                     ))}

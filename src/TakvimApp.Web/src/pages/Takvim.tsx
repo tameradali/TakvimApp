@@ -1,6 +1,11 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { TakvimWidget, TakvimEtkinlik } from '../components/TakvimWidget'
-import { getEgitimEtkinlikleriAralik, getBeklenenEgitimlerAralik, senkronizeTumu, patchEtkinlikFiyat } from '../api/client'
+import {
+  getEgitimEtkinlikleriAralik,
+  getBeklenenEgitimlerAralik,
+  senkronizeTumu,
+  patchEtkinlikBilgi,
+} from '../api/client'
 import type { EgitimEtkinligi, BeklenenEgitim } from '../api/client'
 
 const AY_ADLARI = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık']
@@ -71,9 +76,14 @@ export function Takvim() {
   const [senkronLoading, setSenkronLoading] = useState(false)
   const [hata, setHata]               = useState<string | null>(null)
   const sonYuklenenAralik = useRef<string>('')
+  const sonYuklenenAralikRef = useRef<{ start: Date; end: Date } | null>(null)
+
   const [seciliEtkinlik, setSeciliEtkinlik] = useState<TakvimEtkinlik | null>(null)
-  const [fiyatInput, setFiyatInput]   = useState('')
-  const [fiyatKayitLoading, setFiyatKayitLoading] = useState(false)
+  const [fiyatInput, setFiyatInput]         = useState('')
+  const [etkinlikTuruInput, setEtkinlikTuruInput] = useState('Egitim')
+  const [egitimTipiInput, setEgitimTipiInput]     = useState('')
+  const [masrafInput, setMasrafInput]             = useState('')
+  const [bilgiKayitLoading, setBilgiKayitLoading] = useState(false)
 
   const yukle = useCallback(async (baslangic: Date, bitis: Date) => {
     setLoading(true)
@@ -89,9 +99,14 @@ export function Takvim() {
           title: e.baslik + (e.gunlukFiyat ? ` (${e.gunlukFiyat.toLocaleString('tr-TR')} ₺/gün)` : ''),
           start: new Date(e.baslangicTarihi),
           end:   new Date(e.bitisTarihi),
-          tur:   'planlanan' as const,
+          tur:   (e.etkinlikTuru === 'Toplanti' ? 'toplanti' : 'planlanan') as TakvimEtkinlik['tur'],
           gunlukFiyat: e.gunlukFiyat,
           allDay: true,
+          etkinlikTuru: e.etkinlikTuru,
+          yer:          e.yer,
+          aciklama:     e.aciklama,
+          egitimTipi:   e.egitimTipi,
+          masraf:       e.masraf,
         })),
         ...beklenenData.map((b: BeklenenEgitim) => ({
           id: b.id,
@@ -111,7 +126,6 @@ export function Takvim() {
     }
   }, [])
 
-  // İlk yükleme — FullCalendar datesSet ile tetikleyecek
   useEffect(() => { /* no-op */ }, [])
 
   async function handleSenkron() {
@@ -129,20 +143,31 @@ export function Takvim() {
     }
   }
 
-  async function handleFiyatKaydet() {
-    if (!seciliEtkinlik || seciliEtkinlik.tur !== 'planlanan') return
-    setFiyatKayitLoading(true)
+  function handleEtkinlikSec(evt: TakvimEtkinlik) {
+    setSeciliEtkinlik(evt)
+    setFiyatInput(evt.gunlukFiyat ? String(evt.gunlukFiyat) : '')
+    setEtkinlikTuruInput(evt.etkinlikTuru ?? 'Egitim')
+    setEgitimTipiInput(evt.egitimTipi ?? '')
+    setMasrafInput(evt.masraf ? String(evt.masraf) : '')
+  }
+
+  async function handleBilgiKaydet() {
+    if (!seciliEtkinlik || seciliEtkinlik.tur === 'beklenen') return
+    setBilgiKayitLoading(true)
     try {
-      const fiyat = fiyatInput ? parseFloat(fiyatInput) : null
-      await patchEtkinlikFiyat(seciliEtkinlik.id, fiyat)
+      await patchEtkinlikBilgi(seciliEtkinlik.id, {
+        gunlukFiyat: fiyatInput ? parseFloat(fiyatInput) : null,
+        etkinlikTuru: etkinlikTuruInput,
+        egitimTipi: egitimTipiInput || null,
+        masraf: masrafInput ? parseFloat(masrafInput) : null,
+      })
       setSeciliEtkinlik(null)
-      const bs = new Date(aktifTarih.getFullYear(), aktifTarih.getMonth(), 1)
-      const bt = new Date(aktifTarih.getFullYear(), aktifTarih.getMonth() + 1, 0, 23, 59, 59)
-      await yukle(bs, bt)
+      const ref = sonYuklenenAralikRef.current
+      if (ref) await yukle(ref.start, ref.end)
     } catch (err: unknown) {
       alert(err instanceof Error ? err.message : 'Hata')
     } finally {
-      setFiyatKayitLoading(false)
+      setBilgiKayitLoading(false)
     }
   }
 
@@ -186,6 +211,7 @@ export function Takvim() {
                   { renk: '#4caf50', label: 'Gerçekleşen Eğitim' },
                   { renk: '#ffb300', label: 'Planlanan Eğitim' },
                   { renk: '#f06292', label: 'Beklenen Eğitim' },
+                  { renk: '#2196F3', label: 'Toplantı' },
                 ].map(({ renk, label }) => (
                   <div key={label} className="d-flex align-items-center gap-2">
                     <span style={{ width: 12, height: 12, borderRadius: 3, backgroundColor: renk, flexShrink: 0 }} />
@@ -213,12 +239,10 @@ export function Takvim() {
                     const key = start.toISOString() + end.toISOString()
                     if (sonYuklenenAralik.current === key) return
                     sonYuklenenAralik.current = key
+                    sonYuklenenAralikRef.current = { start, end }
                     yukle(start, end)
                   }}
-                  onSelectEvent={(evt) => {
-                    setSeciliEtkinlik(evt)
-                    setFiyatInput(evt.gunlukFiyat ? String(evt.gunlukFiyat) : '')
-                  }}
+                  onSelectEvent={handleEtkinlikSec}
                 />
               </div>
             </div>
@@ -226,7 +250,7 @@ export function Takvim() {
         </div>
       </div>
 
-      {/* Fiyat güncelleme modal */}
+      {/* Etkinlik detay / bilgi düzenleme modal */}
       {seciliEtkinlik && (
         <>
           <div className="modal-backdrop fade show" style={{ zIndex: 1040 }} onClick={() => setSeciliEtkinlik(null)} />
@@ -241,28 +265,100 @@ export function Takvim() {
                   <button className="btn-close" onClick={() => setSeciliEtkinlik(null)} />
                 </div>
                 <div className="modal-body">
-                  <p className="text-muted small mb-3">
+                  {/* Tarih */}
+                  <p className="text-muted small mb-2">
+                    <i className="ri ri-time-line me-1" />
                     {new Date(seciliEtkinlik.start).toLocaleDateString('tr-TR')} —{' '}
                     {new Date(seciliEtkinlik.end).toLocaleDateString('tr-TR')}
                   </p>
-                  {seciliEtkinlik.tur === 'planlanan' ? (
-                    <div className="mb-3">
-                      <label className="form-label">Günlük Fiyat (₺)</label>
-                      <input
-                        type="number" className="form-control" placeholder="0.00"
-                        value={fiyatInput} onChange={(e) => setFiyatInput(e.target.value)}
-                        min={0} step={0.01}
-                      />
-                    </div>
-                  ) : (
+
+                  {/* Yer */}
+                  {seciliEtkinlik.yer && (
+                    <p className="text-muted small mb-2">
+                      <i className="ri ri-map-pin-line me-1" />
+                      {seciliEtkinlik.yer}
+                    </p>
+                  )}
+
+                  {/* Açıklama */}
+                  {seciliEtkinlik.aciklama && (
+                    <p className="text-muted small mb-3" style={{ whiteSpace: 'pre-wrap' }}>
+                      <i className="ri ri-file-text-line me-1" />
+                      {seciliEtkinlik.aciklama}
+                    </p>
+                  )}
+
+                  {seciliEtkinlik.tur === 'beklenen' ? (
                     <p className="text-muted">Beklenen eğitim — fiyat eğitim listesinden düzenlenebilir.</p>
+                  ) : (
+                    <>
+                      {/* Etkinlik Türü */}
+                      <div className="mb-3">
+                        <label className="form-label fw-semibold">Etkinlik Türü</label>
+                        <select
+                          className="form-select form-select-sm"
+                          value={etkinlikTuruInput}
+                          onChange={e => {
+                            setEtkinlikTuruInput(e.target.value)
+                            if (e.target.value === 'Toplanti') {
+                              setEgitimTipiInput('')
+                              setMasrafInput('')
+                            }
+                          }}
+                        >
+                          <option value="Egitim">Eğitim</option>
+                          <option value="Toplanti">Toplantı</option>
+                        </select>
+                      </div>
+
+                      {/* Günlük Fiyat */}
+                      <div className="mb-3">
+                        <label className="form-label fw-semibold">Günlük Fiyat (₺)</label>
+                        <input
+                          type="number" className="form-control form-control-sm" placeholder="0.00"
+                          value={fiyatInput} onChange={e => setFiyatInput(e.target.value)}
+                          min={0} step={0.01}
+                        />
+                      </div>
+
+                      {/* Eğitim Tipi — sadece Eğitim türünde */}
+                      {etkinlikTuruInput === 'Egitim' && (
+                        <div className="mb-3">
+                          <label className="form-label fw-semibold">Eğitim Tipi</label>
+                          <select
+                            className="form-select form-select-sm"
+                            value={egitimTipiInput}
+                            onChange={e => {
+                              setEgitimTipiInput(e.target.value)
+                              if (e.target.value !== 'Yuzyuze') setMasrafInput('')
+                            }}
+                          >
+                            <option value="">— Seçiniz —</option>
+                            <option value="Yuzyuze">Yüzyüze</option>
+                            <option value="Online">Online</option>
+                          </select>
+                        </div>
+                      )}
+
+                      {/* Masraf — sadece Yüzyüze eğitimde */}
+                      {etkinlikTuruInput === 'Egitim' && egitimTipiInput === 'Yuzyuze' && (
+                        <div className="mb-3">
+                          <label className="form-label fw-semibold">Masraf (₺)</label>
+                          <input
+                            type="number" className="form-control form-control-sm" placeholder="0.00"
+                            value={masrafInput} onChange={e => setMasrafInput(e.target.value)}
+                            min={0} step={0.01}
+                          />
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
-                {seciliEtkinlik.tur === 'planlanan' && (
+                {seciliEtkinlik.tur !== 'beklenen' && (
                   <div className="modal-footer">
                     <button className="btn btn-secondary btn-sm" onClick={() => setSeciliEtkinlik(null)}>İptal</button>
-                    <button className="btn btn-primary btn-sm" onClick={handleFiyatKaydet} disabled={fiyatKayitLoading}>
-                      {fiyatKayitLoading ? <span className="spinner-border spinner-border-sm" /> : 'Kaydet'}
+                    <button className="btn btn-primary btn-sm" onClick={handleBilgiKaydet} disabled={bilgiKayitLoading}>
+                      {bilgiKayitLoading ? <span className="spinner-border spinner-border-sm" /> : 'Kaydet'}
                     </button>
                   </div>
                 )}

@@ -33,6 +33,7 @@ public class GoogleTakvimSenkronizasyonServisi(
                 BaslangicTarihi  = evt.Start,
                 BitisTarihi      = evt.End,
                 Aciklama         = evt.Description,
+                Yer              = evt.Location,
             };
             await etkinlikRepo.EkleVeyaGuncelleAsync(etkinlik);
         }
@@ -46,6 +47,7 @@ internal class IcsEvent
     public string Uid     { get; set; } = "";
     public string Summary { get; set; } = "(başlıksız)";
     public string? Description { get; set; }
+    public string? Location    { get; set; }
     public DateTime Start { get; set; }
     public DateTime End   { get; set; }
 }
@@ -100,6 +102,9 @@ internal static class IcsParser
                     break;
                 case "DESCRIPTION":
                     current.Description = UnescapeIcs(value);
+                    break;
+                case "LOCATION":
+                    current.Location = UnescapeIcs(value);
                     break;
                 case "DTSTART":
                     current.Start = ParseIcsDate(value, hasDateOnly);

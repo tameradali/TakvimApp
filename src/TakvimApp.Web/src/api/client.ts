@@ -54,6 +54,10 @@ export interface EgitimEtkinligi {
   bitisTarihi: string
   aciklama: string | null
   gunlukFiyat: number | null
+  yer: string | null
+  etkinlikTuru: string        // 'Egitim' | 'Toplanti'
+  egitimTipi: string | null   // 'Yuzyuze' | 'Online'
+  masraf: number | null
 }
 
 export interface BeklenenEgitim {
@@ -71,6 +75,7 @@ export interface EtkinlikGelirKalemi {
   baslik: string
   tamamlananGunSayisi: number
   gunlukFiyat: number
+  masraf: number
   toplamGelir: number
 }
 
@@ -147,6 +152,18 @@ export async function patchEtkinlikFiyat(id: number, gunlukFiyat: number | null)
     method: 'PATCH', body: JSON.stringify({ gunlukFiyat }),
   })
   if (!r.ok) throw new Error('Fiyat güncellenemedi')
+}
+
+export async function patchEtkinlikBilgi(id: number, dto: {
+  gunlukFiyat: number | null
+  etkinlikTuru: string
+  egitimTipi: string | null
+  masraf: number | null
+}): Promise<void> {
+  const r = await apiFetch(`/api/egitim-etkinlikleri/${id}/bilgi`, {
+    method: 'PATCH', body: JSON.stringify(dto),
+  })
+  if (!r.ok) throw new Error('Bilgi güncellenemedi')
 }
 
 // ── Etkinlikler ───────────────────────────────────────────────────────────────

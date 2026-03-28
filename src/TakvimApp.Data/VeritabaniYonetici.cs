@@ -55,6 +55,34 @@ public class VeritabaniYonetici
     {
         using var baglanti = BaglantiAc();
 
+        // Migrasyon 2: EgitimEtkinlikleri yeni alanlar
+        {
+            if (!KolonVarMi(baglanti, "egitimetkinlikleri", "yer"))
+            {
+                using var mig = baglanti.CreateCommand();
+                mig.CommandText = "ALTER TABLE EgitimEtkinlikleri ADD COLUMN IF NOT EXISTS Yer TEXT";
+                mig.ExecuteNonQuery();
+            }
+            if (!KolonVarMi(baglanti, "egitimetkinlikleri", "etkinlikturu"))
+            {
+                using var mig = baglanti.CreateCommand();
+                mig.CommandText = "ALTER TABLE EgitimEtkinlikleri ADD COLUMN IF NOT EXISTS EtkinlikTuru TEXT NOT NULL DEFAULT 'Egitim'";
+                mig.ExecuteNonQuery();
+            }
+            if (!KolonVarMi(baglanti, "egitimetkinlikleri", "egitimtipi"))
+            {
+                using var mig = baglanti.CreateCommand();
+                mig.CommandText = "ALTER TABLE EgitimEtkinlikleri ADD COLUMN IF NOT EXISTS EgitimTipi TEXT";
+                mig.ExecuteNonQuery();
+            }
+            if (!KolonVarMi(baglanti, "egitimetkinlikleri", "masraf"))
+            {
+                using var mig = baglanti.CreateCommand();
+                mig.CommandText = "ALTER TABLE EgitimEtkinlikleri ADD COLUMN IF NOT EXISTS Masraf NUMERIC(10,2)";
+                mig.ExecuteNonQuery();
+            }
+        }
+
         // Migrasyon 1: Admin kullanıcısı seed
         {
             long kullaniciSayisi;

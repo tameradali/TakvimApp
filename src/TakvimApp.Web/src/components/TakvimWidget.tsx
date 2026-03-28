@@ -5,7 +5,7 @@ import listPlugin from '@fullcalendar/list'
 import interactionPlugin from '@fullcalendar/interaction'
 import type { EventClickArg, DatesSetArg, EventContentArg } from '@fullcalendar/core'
 
-export type EtkinlikTur = 'gerceklesen' | 'planlanan' | 'beklenen'
+export type EtkinlikTur = 'gerceklesen' | 'planlanan' | 'beklenen' | 'toplanti'
 
 export interface TakvimEtkinlik {
   id: number
@@ -15,6 +15,11 @@ export interface TakvimEtkinlik {
   tur: EtkinlikTur
   gunlukFiyat?: number | null
   allDay?: boolean
+  etkinlikTuru?: string
+  yer?: string | null
+  aciklama?: string | null
+  egitimTipi?: string | null
+  masraf?: number | null
 }
 
 interface FCEvent {
@@ -26,7 +31,12 @@ interface FCEvent {
   backgroundColor: string
   borderColor: string
   textColor: string
-  extendedProps: { originalId: number; tur: EtkinlikTur; gunlukFiyat?: number | null }
+  extendedProps: {
+    originalId: number
+    tur: EtkinlikTur
+    gunlukFiyat?: number | null
+    etkinlikTuru?: string
+  }
 }
 
 function etkinligiDonustur(e: TakvimEtkinlik): FCEvent[] {
@@ -37,12 +47,18 @@ function etkinligiDonustur(e: TakvimEtkinlik): FCEvent[] {
 
   const base = {
     allDay: true,
-    extendedProps: { originalId: e.id, tur: e.tur, gunlukFiyat: e.gunlukFiyat },
+    extendedProps: { originalId: e.id, tur: e.tur, gunlukFiyat: e.gunlukFiyat, etkinlikTuru: e.etkinlikTuru },
   }
 
   if (e.tur === 'beklenen') {
     return [{ ...base, id: String(e.id) + '_b', title: e.title, start: e.start, end: e.end,
       backgroundColor: '#f06292', borderColor: '#c2185b', textColor: '#fff' }]
+  }
+
+  // Toplantı → mavi (tarihten bağımsız, bölünmez)
+  if (e.etkinlikTuru === 'Toplanti') {
+    return [{ ...base, id: String(e.id) + '_t', title: e.title, start: e.start, end: e.end,
+      backgroundColor: '#2196F3', borderColor: '#1565C0', textColor: '#fff' }]
   }
 
   const eStart = new Date(e.start); eStart.setHours(0, 0, 0, 0)
