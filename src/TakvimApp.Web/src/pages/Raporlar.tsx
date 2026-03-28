@@ -246,6 +246,54 @@ export function Raporlar() {
             </div>
           </div>
 
+          {/* İkinci özet satır */}
+          <div className="row g-3 mb-4">
+            {(() => {
+              const best = raporlar.reduce<typeof raporlar[0] | null>((prev, r) => {
+                const g = r.toplamGun
+                  + (planlananDahil ? (r.planlananToplamGun ?? 0) : 0)
+                  + (beklenenDahil  ? (r.beklenenToplamGun  ?? 0) : 0)
+                const pg = prev
+                  ? prev.toplamGun + (planlananDahil ? (prev.planlananToplamGun ?? 0) : 0) + (beklenenDahil ? (prev.beklenenToplamGun ?? 0) : 0)
+                  : 0
+                return g > pg ? r : prev
+              }, null)
+              if (!best) return null
+              const gun = best.toplamGun
+                + (planlananDahil ? (best.planlananToplamGun ?? 0) : 0)
+                + (beklenenDahil  ? (best.beklenenToplamGun  ?? 0) : 0)
+              return (
+                <div className="col-sm-6 col-xl-3">
+                  <div className="card h-100"><div className="card-body">
+                    <p className="text-muted small mb-1">En Çok Gün</p>
+                    <h4 className="mb-0" style={{ color: '#4caf50' }}>{fmt(gun)} gün</h4>
+                    <small className="text-muted">{best.kurumAdi}</small>
+                  </div></div>
+                </div>
+              )
+            })()}
+            {(() => {
+              const best = raporlar
+                .filter(r => r.toplamGun > 0)
+                .reduce<typeof raporlar[0] | null>((prev, r) => {
+                  const rate     = r.toplamGelir / r.toplamGun
+                  const prevRate = prev ? prev.toplamGelir / prev.toplamGun : 0
+                  return rate > prevRate ? r : prev
+                }, null)
+              if (!best) return null
+              const rate = best.toplamGelir / best.toplamGun
+              return (
+                <div className="col-sm-6 col-xl-3">
+                  <div className="card h-100"><div className="card-body">
+                    <p className="text-muted small mb-1">En Yüksek Günlük Gelir</p>
+                    <h4 className="mb-0" style={{ color: '#696cff' }}>{fmtTl(rate)} ₺/gün</h4>
+                    <small className="text-muted">{best.kurumAdi}</small>
+                  </div></div>
+                </div>
+              )
+            })()}
+          </div>
+
           {/* Pie charts */}
           <div className="row g-4 mb-4">
             <div className="col-lg-6">
