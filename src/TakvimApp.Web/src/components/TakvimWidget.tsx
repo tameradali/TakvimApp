@@ -66,6 +66,8 @@ export function TakvimWidget({ etkinlikler, onNavigate, onSelectEvent, onSelectS
         onNavigate={onNavigate}
         onSelectEvent={onSelectEvent as never}
         onSelectSlot={onSelectSlot}
+        defaultView="month"
+        views={['month', 'week', 'day', 'agenda']}
         selectable
         messages={messages}
         culture="tr"
