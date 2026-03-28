@@ -17,4 +17,7 @@ public class EgitimEtkinligi
     public string?  EgitimTipi       { get; set; }
     /// <summary>Yüzyüze eğitimlerde masraf (gelire eklenir)</summary>
     public decimal? Masraf           { get; set; }
+    public int?    KurumId          { get; set; }
+    /// <summary>JOIN'den gelir — yazılmaz</summary>
+    public string? KurumAdi         { get; set; }
 }

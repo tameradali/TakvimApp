@@ -20,6 +20,8 @@ export interface TakvimEtkinlik {
   aciklama?: string | null
   egitimTipi?: string | null
   masraf?: number | null
+  kurumId?: number | null
+  kurumAdi?: string | null
 }
 
 interface FCEvent {

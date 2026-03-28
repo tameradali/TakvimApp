@@ -19,13 +19,17 @@ public class EgitimEtkinligiRepository(VeritabaniYonetici db) : IEgitimEtkinligi
         EtkinlikTuru     = r.IsDBNull(9)  ? "Egitim" : r.GetString(9),
         EgitimTipi       = r.IsDBNull(10) ? null : r.GetString(10),
         Masraf           = r.IsDBNull(11) ? null : r.GetDecimal(11),
+        KurumId          = r.IsDBNull(12) ? null : r.GetInt32(12),
+        KurumAdi         = r.IsDBNull(13) ? null : r.GetString(13),
     };
 
     private const string SelectSql = @"
         SELECT e.Id, e.HesapId, e.GoogleEtkinlikId, e.Baslik,
                e.BaslangicTarihi, e.BitisTarihi, e.Aciklama, e.GunlukFiyat,
-               e.Yer, e.EtkinlikTuru, e.EgitimTipi, e.Masraf
-        FROM EgitimEtkinlikleri e";
+               e.Yer, e.EtkinlikTuru, e.EgitimTipi, e.Masraf,
+               e.KurumId, k.Ad AS KurumAdi
+        FROM EgitimEtkinlikleri e
+        LEFT JOIN Kurumlar k ON e.KurumId = k.Id";
 
     public async Task<List<EgitimEtkinligi>> TumunuGetirAsync(int kullaniciId)
     {
@@ -97,7 +101,7 @@ public class EgitimEtkinligiRepository(VeritabaniYonetici db) : IEgitimEtkinligi
         await komut.ExecuteNonQueryAsync();
     }
 
-    public async Task EtkinlikBilgiGuncelleAsync(int id, decimal? gunlukFiyat, string etkinlikTuru, string? egitimTipi, decimal? masraf)
+    public async Task EtkinlikBilgiGuncelleAsync(int id, decimal? gunlukFiyat, string etkinlikTuru, string? egitimTipi, decimal? masraf, int? kurumId)
     {
         using var baglanti = db.BaglantiAc();
         using var komut    = baglanti.CreateCommand();
@@ -106,13 +110,15 @@ public class EgitimEtkinligiRepository(VeritabaniYonetici db) : IEgitimEtkinligi
             SET GunlukFiyat  = @fiyat,
                 EtkinlikTuru = @tur,
                 EgitimTipi   = @tip,
-                Masraf       = @masraf
+                Masraf       = @masraf,
+                KurumId      = @kurumId
             WHERE Id = @id";
-        komut.Parameters.AddWithValue("@fiyat",  (object?)gunlukFiyat ?? DBNull.Value);
-        komut.Parameters.AddWithValue("@tur",    etkinlikTuru);
-        komut.Parameters.AddWithValue("@tip",    (object?)egitimTipi ?? DBNull.Value);
-        komut.Parameters.AddWithValue("@masraf", (object?)masraf ?? DBNull.Value);
-        komut.Parameters.AddWithValue("@id",     id);
+        komut.Parameters.AddWithValue("@fiyat",   (object?)gunlukFiyat ?? DBNull.Value);
+        komut.Parameters.AddWithValue("@tur",      etkinlikTuru);
+        komut.Parameters.AddWithValue("@tip",      (object?)egitimTipi ?? DBNull.Value);
+        komut.Parameters.AddWithValue("@masraf",   (object?)masraf ?? DBNull.Value);
+        komut.Parameters.AddWithValue("@kurumId",  (object?)kurumId ?? DBNull.Value);
+        komut.Parameters.AddWithValue("@id",       id);
         await komut.ExecuteNonQueryAsync();
     }
 

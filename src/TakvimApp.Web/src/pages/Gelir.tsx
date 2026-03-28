@@ -5,10 +5,12 @@ import type { AylikGelir } from '../api/client'
 
 const AYLAR = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara']
 
+function fmt(v: number) { return v.toLocaleString('tr-TR', { minimumFractionDigits: 2 }) }
+
 export function Gelir() {
   const bugun    = new Date()
   const [yil, setYil]     = useState(bugun.getFullYear())
-  const [ay, setAy]       = useState(bugun.getMonth() + 1)
+  const [ay, setAy]       = useState(bugun.getMonth() + 1) // 0 = Hepsi (yıllık)
   const [aylik, setAylik] = useState<AylikGelir | null>(null)
   const [yillik, setYillik] = useState<AylikGelir[]>([])
   const [loading, setLoading] = useState(false)
@@ -17,10 +19,17 @@ export function Gelir() {
   useEffect(() => {
     setLoading(true)
     setHata(null)
-    Promise.all([getAylikGelir(ay, yil), getYillikGelir(yil)])
-      .then(([a, y]) => { setAylik(a); setYillik(y) })
-      .catch(err => setHata(err instanceof Error ? err.message : 'Hata'))
-      .finally(() => setLoading(false))
+    if (ay === 0) {
+      getYillikGelir(yil)
+        .then(y => { setYillik(y); setAylik(null) })
+        .catch(err => setHata(err instanceof Error ? err.message : 'Hata'))
+        .finally(() => setLoading(false))
+    } else {
+      Promise.all([getAylikGelir(ay, yil), getYillikGelir(yil)])
+        .then(([a, y]) => { setAylik(a); setYillik(y) })
+        .catch(err => setHata(err instanceof Error ? err.message : 'Hata'))
+        .finally(() => setLoading(false))
+    }
   }, [ay, yil])
 
   const grafikVeri = yillik.map(a => ({
@@ -30,6 +39,18 @@ export function Gelir() {
 
   const yillar = [bugun.getFullYear() - 1, bugun.getFullYear(), bugun.getFullYear() + 1]
 
+  // Yıllık toplamlar
+  const yillikGerceklesen = yillik.reduce((s, a) => s + a.etkinlikDetaylari.reduce((ss, k) => ss + k.toplamGelir, 0), 0)
+  const yillikBeklenen    = yillik.reduce((s, a) => s + a.beklenenDetaylari.reduce((ss, k) => ss + k.toplamGelir, 0), 0)
+  const yillikToplam      = yillik.reduce((s, a) => s + a.toplamGelir, 0)
+
+  // Aylık toplamlar (masraf zaten toplamGelir içinde)
+  const aylikGerceklesen  = aylik?.etkinlikDetaylari.reduce((s, k) => s + k.toplamGelir, 0) ?? 0
+  const aylikBeklenen     = aylik?.beklenenDetaylari.reduce((s, k) => s + k.toplamGelir, 0) ?? 0
+  const aylikMasraf       = aylik?.etkinlikDetaylari.reduce((s, k) => s + (k.masraf ?? 0), 0) ?? 0
+
+  const isYillik = ay === 0
+
   return (
     <>
       <div className="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
@@ -38,7 +59,8 @@ export function Gelir() {
           <p className="text-muted small mb-0">Gerçekleşen eğitimlerden hesaplanan gelir</p>
         </div>
         <div className="d-flex gap-2">
-          <select className="form-select form-select-sm" value={ay} onChange={e => setAy(Number(e.target.value))} style={{ width: 120 }}>
+          <select className="form-select form-select-sm" value={ay} onChange={e => setAy(Number(e.target.value))} style={{ width: 140 }}>
+            <option value={0}>Hepsi (Yıllık)</option>
             {AYLAR.map((ad, i) => <option key={i + 1} value={i + 1}>{ad}</option>)}
           </select>
           <select className="form-select form-select-sm" value={yil} onChange={e => setYil(Number(e.target.value))} style={{ width: 90 }}>
@@ -55,36 +77,51 @@ export function Gelir() {
         <>
           {/* Özet kartlar */}
           <div className="row g-3 mb-4">
-            <div className="col-sm-6 col-xl-4">
+            <div className="col-sm-6 col-xl-3">
               <div className="card h-100">
                 <div className="card-body">
-                  <p className="text-muted small mb-1">Aylık Gerçekleşen Gelir</p>
+                  <p className="text-muted small mb-1">{isYillik ? 'Yıllık' : 'Aylık'} Gerçekleşen</p>
                   <h4 className="mb-0" style={{ color: '#4caf50' }}>
-                    {(aylik?.etkinlikDetaylari.reduce((s, k) => s + k.toplamGelir, 0) ?? 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
+                    {fmt(isYillik ? yillikGerceklesen : aylikGerceklesen)} ₺
                   </h4>
+                  {!isYillik && aylikMasraf > 0 && (
+                    <small className="text-muted">masraf: {fmt(aylikMasraf)} ₺ dahil</small>
+                  )}
                 </div>
               </div>
             </div>
-            <div className="col-sm-6 col-xl-4">
+            <div className="col-sm-6 col-xl-3">
               <div className="card h-100">
                 <div className="card-body">
-                  <p className="text-muted small mb-1">Aylık Beklenen Gelir</p>
+                  <p className="text-muted small mb-1">{isYillik ? 'Yıllık' : 'Aylık'} Beklenen</p>
                   <h4 className="mb-0" style={{ color: '#f06292' }}>
-                    {(aylik?.beklenenDetaylari.reduce((s, k) => s + k.toplamGelir, 0) ?? 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
+                    {fmt(isYillik ? yillikBeklenen : aylikBeklenen)} ₺
                   </h4>
                 </div>
               </div>
             </div>
-            <div className="col-sm-6 col-xl-4">
+            <div className="col-sm-6 col-xl-3">
               <div className="card h-100">
                 <div className="card-body">
-                  <p className="text-muted small mb-1">Aylık Toplam</p>
+                  <p className="text-muted small mb-1">{isYillik ? 'Yıllık' : 'Aylık'} Toplam</p>
                   <h4 className="mb-0" style={{ color: '#696cff' }}>
-                    {(aylik?.toplamGelir ?? 0).toLocaleString('tr-TR', { minimumFractionDigits: 2 })} ₺
+                    {fmt(isYillik ? yillikToplam : (aylik?.toplamGelir ?? 0))} ₺
                   </h4>
                 </div>
               </div>
             </div>
+            {!isYillik && (
+              <div className="col-sm-6 col-xl-3">
+                <div className="card h-100">
+                  <div className="card-body">
+                    <p className="text-muted small mb-1">Yıllık Toplam ({yil})</p>
+                    <h4 className="mb-0" style={{ color: '#03a9f4' }}>
+                      {fmt(yillikToplam)} ₺
+                    </h4>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Yıllık grafik */}
@@ -103,8 +140,8 @@ export function Gelir() {
             </div>
           </div>
 
-          {/* Detay tabloları */}
-          {aylik && aylik.etkinlikDetaylari.length > 0 && (
+          {/* Detay tabloları — sadece aylık görünümde */}
+          {!isYillik && aylik && aylik.etkinlikDetaylari.length > 0 && (
             <div className="card mb-4">
               <div className="card-header">
                 <h6 className="mb-0">Gerçekleşen Eğitim Detayları — {AYLAR[ay - 1]} {yil}</h6>
@@ -119,9 +156,9 @@ export function Gelir() {
                       <tr key={k.etkinlikId}>
                         <td>{k.baslik}</td>
                         <td>{k.tamamlananGunSayisi} gün</td>
-                        <td>{k.gunlukFiyat.toLocaleString('tr-TR')} ₺</td>
-                        <td>{k.masraf > 0 ? `${k.masraf.toLocaleString('tr-TR')} ₺` : '—'}</td>
-                        <td><strong>{k.toplamGelir.toLocaleString('tr-TR')} ₺</strong></td>
+                        <td>{fmt(k.gunlukFiyat)} ₺</td>
+                        <td>{k.masraf > 0 ? `${fmt(k.masraf)} ₺` : '—'}</td>
+                        <td><strong>{fmt(k.toplamGelir)} ₺</strong></td>
                       </tr>
                     ))}
                   </tbody>
@@ -130,7 +167,7 @@ export function Gelir() {
             </div>
           )}
 
-          {aylik && aylik.beklenenDetaylari.length > 0 && (
+          {!isYillik && aylik && aylik.beklenenDetaylari.length > 0 && (
             <div className="card">
               <div className="card-header">
                 <h6 className="mb-0">Beklenen Eğitim Detayları — {AYLAR[ay - 1]} {yil}</h6>
@@ -145,8 +182,8 @@ export function Gelir() {
                       <tr key={k.egitimId}>
                         <td>{k.baslik}</td>
                         <td>{k.toplamGunSayisi} gün</td>
-                        <td>{k.gunlukFiyat.toLocaleString('tr-TR')} ₺</td>
-                        <td><strong>{k.toplamGelir.toLocaleString('tr-TR')} ₺</strong></td>
+                        <td>{fmt(k.gunlukFiyat)} ₺</td>
+                        <td><strong>{fmt(k.toplamGelir)} ₺</strong></td>
                       </tr>
                     ))}
                   </tbody>

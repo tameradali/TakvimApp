@@ -46,6 +46,7 @@ builder.Services.AddScoped<IKullaniciRepository,          KullaniciRepository>()
 builder.Services.AddScoped<IGoogleTakvimHesabiRepository, GoogleTakvimHesabiRepository>();
 builder.Services.AddScoped<IEgitimEtkinligiRepository,    EgitimEtkinligiRepository>();
 builder.Services.AddScoped<IBeklenenEgitimRepository,     BeklenenEgitimRepository>();
+builder.Services.AddScoped<IKurumRepository,              KurumRepository>();
 
 // ── Kullanıcı bağlamı ──
 builder.Services.AddScoped<AktifKullaniciServisi>();

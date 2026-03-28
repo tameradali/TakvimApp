@@ -5,8 +5,9 @@ import {
   getBeklenenEgitimlerAralik,
   senkronizeTumu,
   patchEtkinlikBilgi,
+  getKurumlar,
 } from '../api/client'
-import type { EgitimEtkinligi, BeklenenEgitim } from '../api/client'
+import type { EgitimEtkinligi, BeklenenEgitim, Kurum } from '../api/client'
 
 const AY_ADLARI = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık']
 const GUN_ADLARI = ['Pt','Sa','Ça','Pe','Cu','Ct','Pz']
@@ -17,21 +18,18 @@ function MiniTakvim({ aktifAy, onAyDegis }: { aktifAy: Date; onAyDegis: (d: Date
   const bugun = new Date()
 
   const ilkGun = new Date(yil, ay, 1)
-  const bosluk = (ilkGun.getDay() + 6) % 7 // Pazartesi=0
+  const bosluk = (ilkGun.getDay() + 6) % 7
   const gunSayisi = new Date(yil, ay + 1, 0).getDate()
   const gunler: (number | null)[] = [...Array(bosluk).fill(null), ...Array.from({ length: gunSayisi }, (_, i) => i + 1)]
-
-  function oncekiAy() { onAyDegis(new Date(yil, ay - 1, 1)) }
-  function sonrakiAy() { onAyDegis(new Date(yil, ay + 1, 1)) }
 
   return (
     <div>
       <div className="d-flex justify-content-between align-items-center mb-2">
-        <button className="btn btn-sm btn-icon" style={{ background: 'none', border: 'none' }} onClick={oncekiAy}>
+        <button className="btn btn-sm btn-icon" style={{ background: 'none', border: 'none' }} onClick={() => onAyDegis(new Date(yil, ay - 1, 1))}>
           <i className="ri ri-arrow-left-s-line" />
         </button>
         <small className="fw-semibold">{AY_ADLARI[ay]} {yil}</small>
-        <button className="btn btn-sm btn-icon" style={{ background: 'none', border: 'none' }} onClick={sonrakiAy}>
+        <button className="btn btn-sm btn-icon" style={{ background: 'none', border: 'none' }} onClick={() => onAyDegis(new Date(yil, ay + 1, 1))}>
           <i className="ri ri-arrow-right-s-line" />
         </button>
       </div>
@@ -69,6 +67,13 @@ function MiniTakvim({ aktifAy, onAyDegis }: { aktifAy: Date; onAyDegis: (d: Date
   )
 }
 
+// Bir etkinliğin takvimde kapladığı gün sayısını hesapla
+function etkinlikGunSayisi(start: Date, end: Date): number {
+  const s = new Date(start); s.setHours(0, 0, 0, 0)
+  const e = new Date(end);   e.setHours(0, 0, 0, 0)
+  return Math.max(0, Math.round((e.getTime() - s.getTime()) / 86400000))
+}
+
 export function Takvim() {
   const [aktifTarih, setAktifTarih] = useState(new Date())
   const [etkinlikler, setEtkinlikler] = useState<TakvimEtkinlik[]>([])
@@ -78,12 +83,37 @@ export function Takvim() {
   const sonYuklenenAralik = useRef<string>('')
   const sonYuklenenAralikRef = useRef<{ start: Date; end: Date } | null>(null)
 
+  const [kurumlar, setKurumlar] = useState<Kurum[]>([])
+
   const [seciliEtkinlik, setSeciliEtkinlik] = useState<TakvimEtkinlik | null>(null)
-  const [fiyatInput, setFiyatInput]         = useState('')
+  const [fiyatInput, setFiyatInput]               = useState('')
   const [etkinlikTuruInput, setEtkinlikTuruInput] = useState('Egitim')
   const [egitimTipiInput, setEgitimTipiInput]     = useState('')
   const [masrafInput, setMasrafInput]             = useState('')
+  const [kurumIdInput, setKurumIdInput]           = useState<number | null>(null)
   const [bilgiKayitLoading, setBilgiKayitLoading] = useState(false)
+
+  // Gün sayısı hesapla (yüklü aralıktaki etkinliklere göre)
+  const bugun = new Date(); bugun.setHours(0, 0, 0, 0)
+  const gunSayilari = etkinlikler.reduce(
+    (acc, e) => {
+      const s    = new Date(e.start); s.setHours(0, 0, 0, 0)
+      const en   = new Date(e.end);   en.setHours(0, 0, 0, 0)
+      if (e.tur === 'beklenen') {
+        acc.beklenen += etkinlikGunSayisi(s, en)
+      } else if (e.etkinlikTuru === 'Toplanti') {
+        acc.toplanti += etkinlikGunSayisi(s, en)
+      } else {
+        // Eğitim: bugüne göre geçmiş / gelecek böl
+        const pastEnd      = en    < bugun ? en    : bugun
+        const futureStart  = s     > bugun ? s     : bugun
+        acc.gerceklesen   += Math.max(0, Math.round((pastEnd.getTime()    - s.getTime())   / 86400000))
+        acc.planlanan     += Math.max(0, Math.round((en.getTime()         - futureStart.getTime()) / 86400000))
+      }
+      return acc
+    },
+    { gerceklesen: 0, planlanan: 0, beklenen: 0, toplanti: 0 }
+  )
 
   const yukle = useCallback(async (baslangic: Date, bitis: Date) => {
     setLoading(true)
@@ -107,6 +137,8 @@ export function Takvim() {
           aciklama:     e.aciklama,
           egitimTipi:   e.egitimTipi,
           masraf:       e.masraf,
+          kurumId:      e.kurumId,
+          kurumAdi:     e.kurumAdi,
         })),
         ...beklenenData.map((b: BeklenenEgitim) => ({
           id: b.id,
@@ -126,16 +158,17 @@ export function Takvim() {
     }
   }, [])
 
-  useEffect(() => { /* no-op */ }, [])
+  useEffect(() => {
+    getKurumlar().then(setKurumlar).catch(() => {/* sessiz */})
+  }, [])
 
   async function handleSenkron() {
     setSenkronLoading(true)
     setHata(null)
     try {
       await senkronizeTumu()
-      const bs = new Date(aktifTarih.getFullYear(), aktifTarih.getMonth(), 1)
-      const bt = new Date(aktifTarih.getFullYear(), aktifTarih.getMonth() + 1, 0, 23, 59, 59)
-      await yukle(bs, bt)
+      const ref = sonYuklenenAralikRef.current
+      if (ref) await yukle(ref.start, ref.end)
     } catch (err: unknown) {
       setHata(err instanceof Error ? err.message : 'Senkronizasyon başarısız')
     } finally {
@@ -149,6 +182,7 @@ export function Takvim() {
     setEtkinlikTuruInput(evt.etkinlikTuru ?? 'Egitim')
     setEgitimTipiInput(evt.egitimTipi ?? '')
     setMasrafInput(evt.masraf ? String(evt.masraf) : '')
+    setKurumIdInput((evt as TakvimEtkinlik & { kurumId?: number | null }).kurumId ?? null)
   }
 
   async function handleBilgiKaydet() {
@@ -156,10 +190,11 @@ export function Takvim() {
     setBilgiKayitLoading(true)
     try {
       await patchEtkinlikBilgi(seciliEtkinlik.id, {
-        gunlukFiyat: fiyatInput ? parseFloat(fiyatInput) : null,
+        gunlukFiyat:  fiyatInput ? parseFloat(fiyatInput) : null,
         etkinlikTuru: etkinlikTuruInput,
-        egitimTipi: egitimTipiInput || null,
-        masraf: masrafInput ? parseFloat(masrafInput) : null,
+        egitimTipi:   egitimTipiInput || null,
+        masraf:       masrafInput ? parseFloat(masrafInput) : null,
+        kurumId:      kurumIdInput,
       })
       setSeciliEtkinlik(null)
       const ref = sonYuklenenAralikRef.current
@@ -170,6 +205,13 @@ export function Takvim() {
       setBilgiKayitLoading(false)
     }
   }
+
+  const renkAciklamalari = [
+    { renk: '#4caf50', label: 'Gerçekleşen Eğitim', gun: gunSayilari.gerceklesen },
+    { renk: '#ffb300', label: 'Planlanan Eğitim',   gun: gunSayilari.planlanan   },
+    { renk: '#f06292', label: 'Beklenen Eğitim',    gun: gunSayilari.beklenen    },
+    { renk: '#2196F3', label: 'Toplantı',            gun: gunSayilari.toplanti    },
+  ]
 
   return (
     <>
@@ -182,7 +224,6 @@ export function Takvim() {
       <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
         {/* Sol panel */}
         <div style={{ width: 280, flexShrink: 0 }}>
-          {/* Google Sync butonu */}
           <button
             className="btn btn-primary w-100 mb-4 d-flex align-items-center justify-content-center gap-2"
             onClick={handleSenkron}
@@ -195,27 +236,28 @@ export function Takvim() {
             )}
           </button>
 
-          {/* Mini Takvim */}
           <div className="card mb-4">
             <div className="card-body">
               <MiniTakvim aktifAy={aktifTarih} onAyDegis={setAktifTarih} />
             </div>
           </div>
 
-          {/* Renk açıklamaları */}
+          {/* Renk açıklamaları + gün sayıları */}
           <div className="card">
             <div className="card-body">
               <p className="small fw-semibold text-uppercase text-muted mb-3">Renk Açıklamaları</p>
               <div className="d-flex flex-column gap-2">
-                {[
-                  { renk: '#4caf50', label: 'Gerçekleşen Eğitim' },
-                  { renk: '#ffb300', label: 'Planlanan Eğitim' },
-                  { renk: '#f06292', label: 'Beklenen Eğitim' },
-                  { renk: '#2196F3', label: 'Toplantı' },
-                ].map(({ renk, label }) => (
-                  <div key={label} className="d-flex align-items-center gap-2">
-                    <span style={{ width: 12, height: 12, borderRadius: 3, backgroundColor: renk, flexShrink: 0 }} />
-                    <small>{label}</small>
+                {renkAciklamalari.map(({ renk, label, gun }) => (
+                  <div key={label} className="d-flex align-items-center justify-content-between gap-2">
+                    <div className="d-flex align-items-center gap-2">
+                      <span style={{ width: 12, height: 12, borderRadius: 3, backgroundColor: renk, flexShrink: 0 }} />
+                      <small>{label}</small>
+                    </div>
+                    {gun > 0 && (
+                      <span className="badge rounded-pill" style={{ backgroundColor: renk, color: renk === '#ffb300' ? '#333' : '#fff', fontSize: '0.7rem' }}>
+                        {gun} gün
+                      </span>
+                    )}
                   </div>
                 ))}
               </div>
@@ -275,16 +317,14 @@ export function Takvim() {
                   {/* Yer */}
                   {seciliEtkinlik.yer && (
                     <p className="text-muted small mb-2">
-                      <i className="ri ri-map-pin-line me-1" />
-                      {seciliEtkinlik.yer}
+                      <i className="ri ri-map-pin-line me-1" />{seciliEtkinlik.yer}
                     </p>
                   )}
 
                   {/* Açıklama */}
                   {seciliEtkinlik.aciklama && (
                     <p className="text-muted small mb-3" style={{ whiteSpace: 'pre-wrap' }}>
-                      <i className="ri ri-file-text-line me-1" />
-                      {seciliEtkinlik.aciklama}
+                      <i className="ri ri-file-text-line me-1" />{seciliEtkinlik.aciklama}
                     </p>
                   )}
 
@@ -300,15 +340,30 @@ export function Takvim() {
                           value={etkinlikTuruInput}
                           onChange={e => {
                             setEtkinlikTuruInput(e.target.value)
-                            if (e.target.value === 'Toplanti') {
-                              setEgitimTipiInput('')
-                              setMasrafInput('')
-                            }
+                            if (e.target.value === 'Toplanti') { setEgitimTipiInput(''); setMasrafInput('') }
                           }}
                         >
                           <option value="Egitim">Eğitim</option>
                           <option value="Toplanti">Toplantı</option>
                         </select>
+                      </div>
+
+                      {/* Kurum */}
+                      <div className="mb-3">
+                        <label className="form-label fw-semibold">Kurum</label>
+                        <select
+                          className="form-select form-select-sm"
+                          value={kurumIdInput ?? ''}
+                          onChange={e => setKurumIdInput(e.target.value ? Number(e.target.value) : null)}
+                        >
+                          <option value="">— Seçiniz —</option>
+                          {kurumlar.map(k => (
+                            <option key={k.id} value={k.id}>{k.ad}</option>
+                          ))}
+                        </select>
+                        {kurumlar.length === 0 && (
+                          <small className="text-muted">Kurum eklemek için Ayarlar sayfasına gidin.</small>
+                        )}
                       </div>
 
                       {/* Günlük Fiyat */}
@@ -340,7 +395,7 @@ export function Takvim() {
                         </div>
                       )}
 
-                      {/* Masraf — sadece Yüzyüze eğitimde */}
+                      {/* Masraf — sadece Yüzyüze */}
                       {etkinlikTuruInput === 'Egitim' && egitimTipiInput === 'Yuzyuze' && (
                         <div className="mb-3">
                           <label className="form-label fw-semibold">Masraf (₺)</label>

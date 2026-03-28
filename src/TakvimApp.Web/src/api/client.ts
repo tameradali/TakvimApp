@@ -58,6 +58,8 @@ export interface EgitimEtkinligi {
   etkinlikTuru: string        // 'Egitim' | 'Toplanti'
   egitimTipi: string | null   // 'Yuzyuze' | 'Online'
   masraf: number | null
+  kurumId: number | null
+  kurumAdi: string | null
 }
 
 export interface BeklenenEgitim {
@@ -102,6 +104,13 @@ export interface Kullanici {
   adSoyad: string
   rol: string
   olusturulmaTarihi: string
+}
+
+export interface Kurum {
+  id: number
+  kullaniciId: number
+  ad: string
+  notlar: string | null
 }
 
 // ── Google Takvim Hesapları ───────────────────────────────────────────────────
@@ -159,6 +168,7 @@ export async function patchEtkinlikBilgi(id: number, dto: {
   etkinlikTuru: string
   egitimTipi: string | null
   masraf: number | null
+  kurumId: number | null
 }): Promise<void> {
   const r = await apiFetch(`/api/egitim-etkinlikleri/${id}/bilgi`, {
     method: 'PATCH', body: JSON.stringify(dto),
@@ -252,4 +262,31 @@ export async function putAdminKullaniciSifre(id: number, yeniSifre: string): Pro
     method: 'PUT', body: JSON.stringify({ yeniSifre }),
   })
   if (!r.ok) throw new Error('Şifre güncellenemedi')
+}
+
+// ── Kurumlar ──────────────────────────────────────────────────────────────────
+export async function getKurumlar(): Promise<Kurum[]> {
+  const r = await apiFetch('/api/kurumlar')
+  if (!r.ok) throw new Error('Kurumlar alınamadı')
+  return r.json()
+}
+
+export async function postKurum(dto: { ad: string; notlar: string | null }): Promise<{ id: number }> {
+  const r = await apiFetch('/api/kurumlar', {
+    method: 'POST', body: JSON.stringify(dto),
+  })
+  if (!r.ok) throw new Error('Kurum eklenemedi')
+  return r.json()
+}
+
+export async function putKurum(id: number, dto: { ad: string; notlar: string | null }): Promise<void> {
+  const r = await apiFetch(`/api/kurumlar/${id}`, {
+    method: 'PUT', body: JSON.stringify(dto),
+  })
+  if (!r.ok) throw new Error('Kurum güncellenemedi')
+}
+
+export async function deleteKurum(id: number): Promise<void> {
+  const r = await apiFetch(`/api/kurumlar/${id}`, { method: 'DELETE' })
+  if (!r.ok) throw new Error('Kurum silinemedi')
 }

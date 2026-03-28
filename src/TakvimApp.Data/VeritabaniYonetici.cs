@@ -55,6 +55,16 @@ public class VeritabaniYonetici
     {
         using var baglanti = BaglantiAc();
 
+        // Migrasyon 3: EgitimEtkinlikleri KurumId
+        {
+            if (!KolonVarMi(baglanti, "egitimetkinlikleri", "kurumid"))
+            {
+                using var mig = baglanti.CreateCommand();
+                mig.CommandText = "ALTER TABLE EgitimEtkinlikleri ADD COLUMN IF NOT EXISTS KurumId INTEGER REFERENCES Kurumlar(Id) ON DELETE SET NULL";
+                mig.ExecuteNonQuery();
+            }
+        }
+
         // Migrasyon 2: EgitimEtkinlikleri yeni alanlar
         {
             if (!KolonVarMi(baglanti, "egitimetkinlikleri", "yer"))

@@ -45,6 +45,16 @@ public static class VeritabaniSemasi
             OlusturulmaTarihi TIMESTAMP NOT NULL DEFAULT NOW()
         );
 
+        CREATE TABLE IF NOT EXISTS Kurumlar (
+            Id                SERIAL PRIMARY KEY,
+            KullaniciId       INTEGER NOT NULL REFERENCES Kullanicilar(Id),
+            Ad                TEXT NOT NULL,
+            Notlar            TEXT,
+            OlusturulmaTarihi TIMESTAMP NOT NULL DEFAULT NOW()
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_kurumlar_kullanici ON Kurumlar(KullaniciId);
+
         CREATE INDEX IF NOT EXISTS idx_egitimetkinlikleri_hesapid  ON EgitimEtkinlikleri(HesapId);
         CREATE INDEX IF NOT EXISTS idx_egitimetkinlikleri_tarih    ON EgitimEtkinlikleri(BaslangicTarihi, BitisTarihi);
         CREATE INDEX IF NOT EXISTS idx_beklenegitimler_kullanici   ON BeklenenEgitimler(KullaniciId);
