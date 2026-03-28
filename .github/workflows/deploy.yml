@@ -74,13 +74,11 @@ jobs:
           port: 2222
           script: |
             mkdir -p /home/tamer/takvim
-            cat > /home/tamer/takvim/.env << ENVEOF
-CF_TUNNEL_TOKEN=${{ secrets.CF_TUNNEL_TOKEN }}
-JWT_SECRET=${{ secrets.JWT_SECRET }}
-ENVEOF
+            cat > /home/tamer/takvim/.env << 'ENVEOF'
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            ENVEOF
             cat > /home/tamer/takvim/docker-compose.yml << 'COMPOSEEOF'
             services:
-
               postgres:
                 image: postgres:16-alpine
                 container_name: takvim-postgres
@@ -104,7 +102,7 @@ ENVEOF
                 container_name: takvimapp-api
                 environment:
                   PG_CONNECTION_STRING: "Host=takvim-postgres;Database=TakvimApp;Username=tamer;Password=1"
-                  JWT_SECRET: ${JWT_SECRET:-TakvimAppJwtSecret2026_PleaseChangeMe}
+                  JWT_SECRET: ${JWT_SECRET:-TakvimAppJwtSecret2026_PleaseChangeMe_XY12}
                   DOTNET_GCConserveMemory: "9"
                   DOTNET_GCHeapHardLimit: "314572800"
                 networks: [internal]
@@ -116,21 +114,13 @@ ENVEOF
               web:
                 image: ghcr.io/tameradali/takvimapp-web:latest
                 container_name: takvimapp-web
+                ports:
+                  - "8083:80"
                 networks: [internal]
                 depends_on: [api]
                 restart: unless-stopped
                 mem_limit: 128m
                 mem_reservation: 64m
-
-              cloudflared:
-                image: cloudflare/cloudflared:latest
-                container_name: takvim-cloudflared
-                command: tunnel --no-autoupdate run
-                environment:
-                  TUNNEL_TOKEN: ${CF_TUNNEL_TOKEN:-}
-                networks: [internal]
-                restart: unless-stopped
-                mem_limit: 64m
 
             networks:
               internal:
@@ -141,6 +131,6 @@ ENVEOF
             COMPOSEEOF
             cd /home/tamer/takvim
             echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            docker compose pull api web
-            docker compose up -d
+            docker compose pull
+            docker compose up -d --force-recreate
             docker image prune -f
