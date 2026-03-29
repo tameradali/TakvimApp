@@ -453,9 +453,9 @@ export function Raporlar() {
                                 {sehirKisa && (
                                   <span
                                     title={sehirTooltip}
-                                    style={{ fontSize: '0.58rem', color: '#8592a3', cursor: 'help', display: 'block', lineHeight: 1.1, marginTop: 1 }}
+                                    style={{ fontSize: '0.7rem', color: '#696cff', cursor: 'help', display: 'block', lineHeight: 1.3, marginTop: 2, fontWeight: 500 }}
                                   >
-                                    <i className="ri ri-map-pin-line" style={{ fontSize: '0.58rem' }} /> {sehirKisa}
+                                    <i className="ri ri-map-pin-line" /> {sehirKisa}
                                   </span>
                                 )}
                               </>
