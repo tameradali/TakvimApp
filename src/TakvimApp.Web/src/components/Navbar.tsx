@@ -22,11 +22,11 @@ export function Navbar({ onMenuToggle }: NavbarProps) {
     <nav className="layout-navbar navbar navbar-expand-xl align-items-center bg-navbar-theme">
       <div className="container-fluid px-4 d-flex align-items-center">
         <button
-          className="layout-menu-toggle d-xl-none btn btn-sm me-2"
-          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px 8px' }}
+          className="layout-menu-toggle d-xl-none btn me-2"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '10px 12px', minWidth: 44, minHeight: 44 }}
           onClick={onMenuToggle}
         >
-          <i className="ri ri-menu-line ri-22px" />
+          <i className="ri ri-menu-line" style={{ fontSize: 24 }} />
         </button>
 
         <div className="flex-grow-1" />

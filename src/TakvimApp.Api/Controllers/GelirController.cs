@@ -84,6 +84,23 @@ public class GelirController(
                 dict[key].AyGelirler[ay - 1] += k.ToplamGelir;
             }
 
+            // Şehir takibi — gerçekleşen eğitimler
+            foreach (var e in etkinlikler.Where(e => e.EtkinlikTuru != "Toplanti" && !string.IsNullOrEmpty(e.Sehir)))
+            {
+                var bitisEx2 = e.BitisTarihi.TimeOfDay == TimeSpan.Zero
+                    ? e.BitisTarihi.Date : e.BitisTarihi.Date.AddDays(1);
+                var effEnd2  = bitisEx2 < ayBitisi.AddDays(1) ? bitisEx2 : ayBitisi.AddDays(1);
+                effEnd2      = effEnd2 <= bugun ? effEnd2 : bugun.AddDays(1);
+                var effStart2 = e.BaslangicTarihi.Date > ayBaslangici ? e.BaslangicTarihi.Date : ayBaslangici;
+                var gun2 = Math.Max(0, (effEnd2 - effStart2).Days);
+                if (gun2 <= 0) continue;
+                var key2 = GetKey(e.KurumId);
+                if (!dict.ContainsKey(key2)) continue;
+                var sehirDict = dict[key2].AySehirler[ay - 1];
+                sehirDict.TryGetValue(e.Sehir!, out var mevcut);
+                sehirDict[e.Sehir!] = mevcut + gun2;
+            }
+
             // Planlanan gün — tüm eğitimler (fiyatsız dahil, toplantı hariç) → frontend ile senkron
             foreach (var e in etkinlikler.Where(e => e.EtkinlikTuru != "Toplanti"))
             {
@@ -145,6 +162,10 @@ public class GelirController(
                     toplamGelir    = d.AyGelirler[i],
                     planlananGun   = d.AyPlanlananGunler[i],
                     planlananGelir = d.AyPlanlananGelirler[i],
+                    sehirler       = d.AySehirler[i]
+                        .OrderByDescending(kv => kv.Value)
+                        .Select(kv => new { sehir = kv.Key, gun = kv.Value })
+                        .ToList(),
                 }).ToList(),
             });
 
@@ -172,6 +193,7 @@ public class GelirController(
         public decimal[] AyGelirler          { get; } = new decimal[12];
         public int[]     AyPlanlananGunler   { get; } = new int[12];
         public decimal[] AyPlanlananGelirler { get; } = new decimal[12];
+        public Dictionary<string, int>[] AySehirler { get; } = Enumerable.Range(0, 12).Select(_ => new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)).ToArray();
         public int       BeklenenGun         { get; set; }
         public decimal   BeklenenGelir       { get; set; }
         public int       ToplamGun           => AyGunler.Sum();

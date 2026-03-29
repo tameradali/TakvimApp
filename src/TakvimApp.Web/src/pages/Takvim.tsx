@@ -9,6 +9,17 @@ import {
 } from '../api/client'
 import type { EgitimEtkinligi, BeklenenEgitim, Kurum } from '../api/client'
 
+const TURKIYE_ILLERI = [
+  'Adana','Adıyaman','Afyonkarahisar','Ağrı','Aksaray','Amasya','Ankara','Antalya','Ardahan','Artvin',
+  'Aydın','Balıkesir','Bartın','Batman','Bayburt','Bilecik','Bingöl','Bitlis','Bolu','Burdur',
+  'Bursa','Çanakkale','Çankırı','Çorum','Denizli','Diyarbakır','Düzce','Edirne','Elazığ','Erzincan',
+  'Erzurum','Eskişehir','Gaziantep','Giresun','Gümüşhane','Hakkari','Hatay','Iğdır','Isparta','İstanbul',
+  'İzmir','Kahramanmaraş','Karabük','Karaman','Kars','Kastamonu','Kayseri','Kilis','Kırıkkale','Kırklareli',
+  'Kırşehir','Kocaeli','Konya','Kütahya','Malatya','Manisa','Mardin','Mersin','Muğla','Muş',
+  'Nevşehir','Niğde','Ordu','Osmaniye','Rize','Sakarya','Samsun','Şanlıurfa','Şırnak','Siirt',
+  'Sinop','Sivas','Tekirdağ','Tokat','Trabzon','Tunceli','Uşak','Van','Yalova','Yozgat','Zonguldak',
+]
+
 function etkinlikGunSayisi(start: Date, end: Date): number {
   const s = new Date(start); s.setHours(0, 0, 0, 0)
   const e = new Date(end);   e.setHours(0, 0, 0, 0)
@@ -47,6 +58,7 @@ export function Takvim() {
   const [egitimTipiInput, setEgitimTipiInput]         = useState('')
   const [masrafInput, setMasrafInput]                 = useState('')
   const [kurumIdInput, setKurumIdInput]               = useState<number | null>(null)
+  const [sehirInput, setSehirInput]                   = useState('')
   const [bilgiKayitLoading, setBilgiKayitLoading]     = useState(false)
 
   // Yıl değişince tüm yılın etkinliklerini çek (gün sayacı için)
@@ -122,7 +134,7 @@ export function Takvim() {
           gunlukFiyat: e.gunlukFiyat, allDay: true,
           etkinlikTuru: e.etkinlikTuru, yer: e.yer, aciklama: e.aciklama,
           egitimTipi: e.egitimTipi, masraf: e.masraf,
-          kurumId: e.kurumId, kurumAdi: e.kurumAdi,
+          kurumId: e.kurumId, kurumAdi: e.kurumAdi, sehir: e.sehir,
         })),
         ...beklenenData.map((b: BeklenenEgitim) => ({
           id: b.id,
@@ -158,6 +170,7 @@ export function Takvim() {
     setEgitimTipiInput(evt.egitimTipi ?? '')
     setMasrafInput(evt.masraf ? String(evt.masraf) : '')
     setKurumIdInput((evt as TakvimEtkinlik & { kurumId?: number | null }).kurumId ?? null)
+    setSehirInput(evt.sehir ?? '')
   }
 
   async function handleBilgiKaydet() {
@@ -170,6 +183,7 @@ export function Takvim() {
         egitimTipi:   egitimTipiInput || null,
         masraf:       masrafInput ? parseFloat(masrafInput) : null,
         kurumId:      kurumIdInput,
+        sehir:        sehirInput.trim() || null,
       })
       setSeciliEtkinlik(null)
       const ref = sonYuklenenAralikRef.current
@@ -183,7 +197,7 @@ export function Takvim() {
     { renk: '#4caf50', label: 'Gerçekleşen Eğitim', gun: gunSayilari.gerceklesen },
     { renk: '#ffb300', label: 'Planlanan Eğitim',   gun: gunSayilari.planlanan   },
     { renk: '#f06292', label: 'Beklenen Eğitim',    gun: gunSayilari.beklenen    },
-    { renk: '#2196F3', label: 'Toplantı',            gun: gunSayilari.toplanti    },
+    { renk: '#2196F3', label: 'Toplantı',            gun: 0 },
   ]
 
   return (
@@ -361,6 +375,20 @@ export function Takvim() {
                           <small className="text-muted">Toplam masraf = bu tutar × gün sayısı</small>
                         </div>
                       )}
+
+                      <div className="mb-3">
+                        <label className="form-label fw-semibold">Şehir</label>
+                        <input
+                          className="form-control form-control-sm"
+                          placeholder="Şehir seçin..."
+                          list="turkiye-illeri"
+                          value={sehirInput}
+                          onChange={e => setSehirInput(e.target.value)}
+                        />
+                        <datalist id="turkiye-illeri">
+                          {TURKIYE_ILLERI.map(il => <option key={il} value={il} />)}
+                        </datalist>
+                      </div>
                     </>
                   )}
                 </div>

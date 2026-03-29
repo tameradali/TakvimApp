@@ -20,4 +20,7 @@ public class EgitimEtkinligi
     public int?    KurumId          { get; set; }
     /// <summary>JOIN'den gelir — yazılmaz</summary>
     public string? KurumAdi         { get; set; }
+    public string? Sehir            { get; set; }
+    /// <summary>Google'dan silinmiş etkinlikler — gösterilmez ama silinmez</summary>
+    public bool    ArsivMi          { get; set; } = false;
 }

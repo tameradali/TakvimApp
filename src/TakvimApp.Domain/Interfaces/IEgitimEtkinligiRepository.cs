@@ -8,9 +8,11 @@ public interface IEgitimEtkinligiRepository
     Task<List<EgitimEtkinligi>> AralikGetirAsync(int kullaniciId, DateTime baslangic, DateTime bitis);
     Task<int> EkleVeyaGuncelleAsync(EgitimEtkinligi etkinlik);
     Task FiyatGuncelleAsync(int id, decimal? gunlukFiyat);
-    Task EtkinlikBilgiGuncelleAsync(int id, decimal? gunlukFiyat, string etkinlikTuru, string? egitimTipi, decimal? masraf, int? kurumId);
+    Task EtkinlikBilgiGuncelleAsync(int id, decimal? gunlukFiyat, string etkinlikTuru, string? egitimTipi, decimal? masraf, int? kurumId, string? sehir);
     Task HesabaGoreTemizleAsync(int hesapId);
     Task<int> EkleManuelAsync(EgitimEtkinligi etkinlik, int kullaniciId);
-    Task TamGuncelleAsync(int id, string baslik, DateTime baslangicTarihi, DateTime bitisTarihi, decimal? gunlukFiyat, string etkinlikTuru, string? egitimTipi, decimal? masraf, int? kurumId);
+    Task TamGuncelleAsync(int id, string baslik, DateTime baslangicTarihi, DateTime bitisTarihi, decimal? gunlukFiyat, string etkinlikTuru, string? egitimTipi, decimal? masraf, int? kurumId, string? sehir);
     Task SilAsync(int id, int kullaniciId);
+    Task<List<(int Id, string GoogleEtkinlikId)>> HesaptakiAktifIdleriGetirAsync(int hesapId);
+    Task ArsivleAsync(IEnumerable<int> ids);
 }

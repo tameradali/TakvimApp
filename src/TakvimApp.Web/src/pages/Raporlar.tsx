@@ -273,21 +273,16 @@ export function Raporlar() {
               )
             })()}
             {(() => {
-              const best = raporlar
-                .filter(r => r.toplamGun > 0)
-                .reduce<typeof raporlar[0] | null>((prev, r) => {
-                  const rate     = r.toplamGelir / r.toplamGun
-                  const prevRate = prev ? prev.toplamGelir / prev.toplamGun : 0
-                  return rate > prevRate ? r : prev
-                }, null)
-              if (!best) return null
-              const rate = best.toplamGelir / best.toplamGun
+              const toplamTumGelir = toplamGelir
+                + (planlananDahil ? planlananToplamGelir : 0)
+                + (beklenenDahil  ? beklenenToplamGelir  : 0)
+              const aylikOrtalama = toplamTumGelir / 12
               return (
                 <div className="col-sm-6 col-xl-3">
                   <div className="card h-100"><div className="card-body">
-                    <p className="text-muted small mb-1">En Yüksek Günlük Gelir</p>
-                    <h4 className="mb-0" style={{ color: '#696cff' }}>{fmtTl(rate)} ₺/gün</h4>
-                    <small className="text-muted">{best.kurumAdi}</small>
+                    <p className="text-muted small mb-1">Aylık Ort. Gelir ({yil})</p>
+                    <h4 className="mb-0" style={{ color: '#696cff' }}>{fmtTl(aylikOrtalama)} ₺</h4>
+                    <small className="text-muted">Yıllık toplam / 12</small>
                   </div></div>
                 </div>
               )
@@ -432,8 +427,11 @@ export function Raporlar() {
                       {r.aylar.map(a => {
                         const g = a.gunSayisi
                         const p = planlananDahil ? (a.planlananGun ?? 0) : 0
+                        const sehirTooltip = a.sehirler && a.sehirler.length > 0
+                          ? a.sehirler.map(s => `${s.sehir}: ${s.gun}g`).join(', ')
+                          : undefined
                         return (
-                          <td key={a.ay} className="text-center" style={{ verticalAlign: 'middle' }}>
+                          <td key={a.ay} className="text-center" style={{ verticalAlign: 'middle' }} title={sehirTooltip}>
                             {g > 0 || p > 0 ? (
                               <>
                                 <span className="d-block" style={{ lineHeight: 1.2 }}>

@@ -36,7 +36,7 @@ public class EgitimEtkinligiController(
     [HttpPatch("{id}/bilgi")]
     public async Task<IActionResult> BilgiGuncelle(int id, [FromBody] BilgiGuncelleRequest req)
     {
-        await repo.EtkinlikBilgiGuncelleAsync(id, req.GunlukFiyat, req.EtkinlikTuru, req.EgitimTipi, req.Masraf, req.KurumId);
+        await repo.EtkinlikBilgiGuncelleAsync(id, req.GunlukFiyat, req.EtkinlikTuru, req.EgitimTipi, req.Masraf, req.KurumId, req.Sehir);
         return NoContent();
     }
 
@@ -53,6 +53,7 @@ public class EgitimEtkinligiController(
             EgitimTipi      = req.EgitimTipi,
             Masraf          = req.Masraf,
             KurumId         = req.KurumId,
+            Sehir           = req.Sehir,
         };
         var id = await repo.EkleManuelAsync(etkinlik, aktifKullanici.KullaniciId);
         return Ok(new { id });
@@ -62,7 +63,7 @@ public class EgitimEtkinligiController(
     public async Task<IActionResult> TamGuncelle(int id, [FromBody] ManuelEtkinlikRequest req)
     {
         await repo.TamGuncelleAsync(id, req.Baslik, req.BaslangicTarihi, req.BitisTarihi,
-            req.GunlukFiyat, req.EtkinlikTuru ?? "Egitim", req.EgitimTipi, req.Masraf, req.KurumId);
+            req.GunlukFiyat, req.EtkinlikTuru ?? "Egitim", req.EgitimTipi, req.Masraf, req.KurumId, req.Sehir);
         return NoContent();
     }
 
@@ -74,7 +75,7 @@ public class EgitimEtkinligiController(
     }
 
     public record FiyatGuncelleRequest(decimal? GunlukFiyat);
-    public record BilgiGuncelleRequest(decimal? GunlukFiyat, string EtkinlikTuru, string? EgitimTipi, decimal? Masraf, int? KurumId);
+    public record BilgiGuncelleRequest(decimal? GunlukFiyat, string EtkinlikTuru, string? EgitimTipi, decimal? Masraf, int? KurumId, string? Sehir);
     public record ManuelEtkinlikRequest(
         string   Baslik,
         DateTime BaslangicTarihi,
@@ -83,5 +84,6 @@ public class EgitimEtkinligiController(
         string?  EtkinlikTuru,
         string?  EgitimTipi,
         decimal? Masraf,
-        int?     KurumId);
+        int?     KurumId,
+        string?  Sehir);
 }

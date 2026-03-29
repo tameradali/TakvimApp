@@ -22,6 +22,7 @@ export interface TakvimEtkinlik {
   masraf?: number | null
   kurumId?: number | null
   kurumAdi?: string | null
+  sehir?: string | null
   beklenenGunSayisi?: number
 }
 
@@ -124,7 +125,7 @@ export function TakvimWidget({ etkinlikler, onDatesSet, onSelectEvent, isMobile 
   return (
     <FullCalendar
       plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
-      initialView={isMobile ? 'listMonth' : 'dayGridMonth'}
+      initialView='dayGridMonth'
       headerToolbar={isMobile ? {
         left: 'prev,next',
         center: 'title',

@@ -21,13 +21,15 @@ public class EgitimEtkinligiRepository(VeritabaniYonetici db) : IEgitimEtkinligi
         Masraf           = r.IsDBNull(11) ? null : r.GetDecimal(11),
         KurumId          = r.IsDBNull(12) ? null : r.GetInt32(12),
         KurumAdi         = r.IsDBNull(13) ? null : r.GetString(13),
+        Sehir            = r.IsDBNull(14) ? null : r.GetString(14),
+        ArsivMi          = r.IsDBNull(15) ? false : r.GetBoolean(15),
     };
 
     private const string SelectSql = @"
         SELECT e.Id, e.HesapId, e.GoogleEtkinlikId, e.Baslik,
                e.BaslangicTarihi, e.BitisTarihi, e.Aciklama, e.GunlukFiyat,
                e.Yer, e.EtkinlikTuru, e.EgitimTipi, e.Masraf,
-               e.KurumId, k.Ad AS KurumAdi
+               e.KurumId, k.Ad AS KurumAdi, e.Sehir, e.ArsivMi
         FROM EgitimEtkinlikleri e
         LEFT JOIN Kurumlar k ON e.KurumId = k.Id";
 
@@ -37,7 +39,7 @@ public class EgitimEtkinligiRepository(VeritabaniYonetici db) : IEgitimEtkinligi
         using var komut    = baglanti.CreateCommand();
         komut.CommandText  = SelectSql + @"
             JOIN GoogleTakvimHesaplari h ON e.HesapId = h.Id
-            WHERE h.KullaniciId = @kid
+            WHERE h.KullaniciId = @kid AND e.ArsivMi = FALSE
             ORDER BY e.BaslangicTarihi";
         komut.Parameters.AddWithValue("@kid", kullaniciId);
         using var r  = await komut.ExecuteReaderAsync();
@@ -53,6 +55,7 @@ public class EgitimEtkinligiRepository(VeritabaniYonetici db) : IEgitimEtkinligi
         komut.CommandText  = SelectSql + @"
             JOIN GoogleTakvimHesaplari h ON e.HesapId = h.Id
             WHERE h.KullaniciId = @kid
+              AND e.ArsivMi = FALSE
               AND e.BaslangicTarihi <= @bitis
               AND e.BitisTarihi    >= @baslangic
             ORDER BY e.BaslangicTarihi";
@@ -69,17 +72,19 @@ public class EgitimEtkinligiRepository(VeritabaniYonetici db) : IEgitimEtkinligi
     {
         using var baglanti = db.BaglantiAc();
         using var komut    = baglanti.CreateCommand();
-        // GunlukFiyat, EtkinlikTuru, EgitimTipi, Masraf kasıtlı olarak güncellenmez — kullanıcı girişini korur
+        // GunlukFiyat, EtkinlikTuru, EgitimTipi, Masraf, Sehir kasıtlı olarak güncellenmez — kullanıcı girişini korur
+        // ArsivMi = FALSE: Google'dan geri gelen event arşivden çıkarılır
         komut.CommandText  = @"
             INSERT INTO EgitimEtkinlikleri
-                (HesapId, GoogleEtkinlikId, Baslik, BaslangicTarihi, BitisTarihi, Aciklama, Yer)
-            VALUES (@hesapId, @gid, @baslik, @bs, @bt, @ac, @yer)
+                (HesapId, GoogleEtkinlikId, Baslik, BaslangicTarihi, BitisTarihi, Aciklama, Yer, ArsivMi)
+            VALUES (@hesapId, @gid, @baslik, @bs, @bt, @ac, @yer, FALSE)
             ON CONFLICT (HesapId, GoogleEtkinlikId) DO UPDATE
                 SET Baslik           = EXCLUDED.Baslik,
                     BaslangicTarihi  = EXCLUDED.BaslangicTarihi,
                     BitisTarihi      = EXCLUDED.BitisTarihi,
                     Aciklama         = EXCLUDED.Aciklama,
-                    Yer              = EXCLUDED.Yer
+                    Yer              = EXCLUDED.Yer,
+                    ArsivMi          = FALSE
             RETURNING Id";
         komut.Parameters.AddWithValue("@hesapId", etkinlik.HesapId);
         komut.Parameters.AddWithValue("@gid",     etkinlik.GoogleEtkinlikId);
@@ -101,7 +106,7 @@ public class EgitimEtkinligiRepository(VeritabaniYonetici db) : IEgitimEtkinligi
         await komut.ExecuteNonQueryAsync();
     }
 
-    public async Task EtkinlikBilgiGuncelleAsync(int id, decimal? gunlukFiyat, string etkinlikTuru, string? egitimTipi, decimal? masraf, int? kurumId)
+    public async Task EtkinlikBilgiGuncelleAsync(int id, decimal? gunlukFiyat, string etkinlikTuru, string? egitimTipi, decimal? masraf, int? kurumId, string? sehir)
     {
         using var baglanti = db.BaglantiAc();
         using var komut    = baglanti.CreateCommand();
@@ -111,13 +116,15 @@ public class EgitimEtkinligiRepository(VeritabaniYonetici db) : IEgitimEtkinligi
                 EtkinlikTuru = @tur,
                 EgitimTipi   = @tip,
                 Masraf       = @masraf,
-                KurumId      = @kurumId
+                KurumId      = @kurumId,
+                Sehir        = @sehir
             WHERE Id = @id";
         komut.Parameters.AddWithValue("@fiyat",   (object?)gunlukFiyat ?? DBNull.Value);
         komut.Parameters.AddWithValue("@tur",      etkinlikTuru);
         komut.Parameters.AddWithValue("@tip",      (object?)egitimTipi ?? DBNull.Value);
         komut.Parameters.AddWithValue("@masraf",   (object?)masraf ?? DBNull.Value);
         komut.Parameters.AddWithValue("@kurumId",  (object?)kurumId ?? DBNull.Value);
+        komut.Parameters.AddWithValue("@sehir",    (object?)sehir ?? DBNull.Value);
         komut.Parameters.AddWithValue("@id",       id);
         await komut.ExecuteNonQueryAsync();
     }
@@ -133,7 +140,6 @@ public class EgitimEtkinligiRepository(VeritabaniYonetici db) : IEgitimEtkinligi
 
     public async Task<int> EkleManuelAsync(EgitimEtkinligi e, int kullaniciId)
     {
-        // First get the user's first HesapId
         int hesapId;
         using (var bag1 = db.BaglantiAc())
         {
@@ -149,9 +155,9 @@ public class EgitimEtkinligiRepository(VeritabaniYonetici db) : IEgitimEtkinligi
         cmd.CommandText = @"
             INSERT INTO EgitimEtkinlikleri
                 (HesapId, GoogleEtkinlikId, Baslik, BaslangicTarihi, BitisTarihi,
-                 GunlukFiyat, EtkinlikTuru, EgitimTipi, Masraf, KurumId)
+                 GunlukFiyat, EtkinlikTuru, EgitimTipi, Masraf, KurumId, Sehir)
             VALUES (@hesapId, @gid, @baslik, @bs, @bt,
-                    @fiyat, @tur, @tip, @masraf, @kurumId)
+                    @fiyat, @tur, @tip, @masraf, @kurumId, @sehir)
             RETURNING Id";
         cmd.Parameters.AddWithValue("@hesapId", hesapId);
         cmd.Parameters.AddWithValue("@gid",     $"manual-{Guid.NewGuid():N}");
@@ -163,11 +169,12 @@ public class EgitimEtkinligiRepository(VeritabaniYonetici db) : IEgitimEtkinligi
         cmd.Parameters.AddWithValue("@tip",     (object?)e.EgitimTipi  ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@masraf",  (object?)e.Masraf      ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@kurumId", (object?)e.KurumId     ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@sehir",   (object?)e.Sehir       ?? DBNull.Value);
         return (int)(await cmd.ExecuteScalarAsync())!;
     }
 
     public async Task TamGuncelleAsync(int id, string baslik, DateTime bs, DateTime bt,
-        decimal? gunlukFiyat, string etkinlikTuru, string? egitimTipi, decimal? masraf, int? kurumId)
+        decimal? gunlukFiyat, string etkinlikTuru, string? egitimTipi, decimal? masraf, int? kurumId, string? sehir)
     {
         using var bag = db.BaglantiAc();
         using var cmd = bag.CreateCommand();
@@ -180,7 +187,8 @@ public class EgitimEtkinligiRepository(VeritabaniYonetici db) : IEgitimEtkinligi
                 EtkinlikTuru    = @tur,
                 EgitimTipi      = @tip,
                 Masraf          = @masraf,
-                KurumId         = @kurumId
+                KurumId         = @kurumId,
+                Sehir           = @sehir
             WHERE Id = @id";
         cmd.Parameters.AddWithValue("@baslik",  baslik);
         cmd.Parameters.AddWithValue("@bs",      bs);
@@ -190,6 +198,7 @@ public class EgitimEtkinligiRepository(VeritabaniYonetici db) : IEgitimEtkinligi
         cmd.Parameters.AddWithValue("@tip",     (object?)egitimTipi  ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@masraf",  (object?)masraf      ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@kurumId", (object?)kurumId     ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@sehir",   (object?)sehir       ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@id",      id);
         await cmd.ExecuteNonQueryAsync();
     }
@@ -204,6 +213,32 @@ public class EgitimEtkinligiRepository(VeritabaniYonetici db) : IEgitimEtkinligi
             WHERE e.Id = @id AND e.HesapId = h.Id AND h.KullaniciId = @kid";
         cmd.Parameters.AddWithValue("@id",  id);
         cmd.Parameters.AddWithValue("@kid", kullaniciId);
+        await cmd.ExecuteNonQueryAsync();
+    }
+
+    public async Task<List<(int Id, string GoogleEtkinlikId)>> HesaptakiAktifIdleriGetirAsync(int hesapId)
+    {
+        using var bag = db.BaglantiAc();
+        using var cmd = bag.CreateCommand();
+        cmd.CommandText = @"
+            SELECT Id, GoogleEtkinlikId FROM EgitimEtkinlikleri
+            WHERE HesapId = @hesapId AND ArsivMi = FALSE
+              AND GoogleEtkinlikId NOT LIKE 'manual-%'";
+        cmd.Parameters.AddWithValue("@hesapId", hesapId);
+        using var r  = await cmd.ExecuteReaderAsync();
+        var liste    = new List<(int, string)>();
+        while (await r.ReadAsync()) liste.Add((r.GetInt32(0), r.GetString(1)));
+        return liste;
+    }
+
+    public async Task ArsivleAsync(IEnumerable<int> ids)
+    {
+        var idList = ids.ToArray();
+        if (idList.Length == 0) return;
+        using var bag = db.BaglantiAc();
+        using var cmd = bag.CreateCommand();
+        cmd.CommandText = "UPDATE EgitimEtkinlikleri SET ArsivMi = TRUE WHERE Id = ANY(@ids)";
+        cmd.Parameters.AddWithValue("@ids", idList);
         await cmd.ExecuteNonQueryAsync();
     }
 }

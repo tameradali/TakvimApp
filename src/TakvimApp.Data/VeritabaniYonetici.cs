@@ -129,6 +129,22 @@ public class VeritabaniYonetici
             }
         }
 
+        // Migrasyon 7: EgitimEtkinlikleri — Sehir ve ArsivMi kolonları
+        {
+            if (!KolonVarMi(baglanti, "egitimetkinlikleri", "sehir"))
+            {
+                using var mig = baglanti.CreateCommand();
+                mig.CommandText = "ALTER TABLE EgitimEtkinlikleri ADD COLUMN IF NOT EXISTS Sehir TEXT";
+                mig.ExecuteNonQuery();
+            }
+            if (!KolonVarMi(baglanti, "egitimetkinlikleri", "arsivmi"))
+            {
+                using var mig = baglanti.CreateCommand();
+                mig.CommandText = "ALTER TABLE EgitimEtkinlikleri ADD COLUMN IF NOT EXISTS ArsivMi BOOLEAN NOT NULL DEFAULT FALSE";
+                mig.ExecuteNonQuery();
+            }
+        }
+
         // Migrasyon 1: Admin kullanıcısı seed
         {
             long kullaniciSayisi;

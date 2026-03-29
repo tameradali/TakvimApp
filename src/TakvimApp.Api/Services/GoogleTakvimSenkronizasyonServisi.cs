@@ -23,6 +23,9 @@ public class GoogleTakvimSenkronizasyonServisi(
 
         var etkinlikler = IcsParser.Parse(icsContent);
 
+        // Google'dan silinen etkinlikleri arşivlemek için önce DB'dekilerı al
+        var dbIdler = await etkinlikRepo.HesaptakiAktifIdleriGetirAsync(hesap.Id);
+
         foreach (var evt in etkinlikler)
         {
             var etkinlik = new EgitimEtkinligi
@@ -37,6 +40,15 @@ public class GoogleTakvimSenkronizasyonServisi(
             };
             await etkinlikRepo.EkleVeyaGuncelleAsync(etkinlik);
         }
+
+        // DB'de olup Google'da artık olmayan etkinlikleri arşivle
+        var googleUidler = new HashSet<string>(etkinlikler.Select(e => e.Uid), StringComparer.OrdinalIgnoreCase);
+        var arsivlenecekler = dbIdler
+            .Where(d => !googleUidler.Contains(d.GoogleEtkinlikId))
+            .Select(d => d.Id)
+            .ToList();
+        if (arsivlenecekler.Count > 0)
+            await etkinlikRepo.ArsivleAsync(arsivlenecekler);
 
         await hesapRepo.SonSenkronizasyonGuncelleAsync(hesap.Id, DateTime.UtcNow);
     }

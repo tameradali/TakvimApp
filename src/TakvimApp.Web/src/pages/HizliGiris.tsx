@@ -5,6 +5,17 @@ import {
 } from '../api/client'
 import type { EgitimEtkinligi, Kurum } from '../api/client'
 
+const TURKIYE_ILLERI = [
+  'Adana','Adıyaman','Afyonkarahisar','Ağrı','Aksaray','Amasya','Ankara','Antalya','Ardahan','Artvin',
+  'Aydın','Balıkesir','Bartın','Batman','Bayburt','Bilecik','Bingöl','Bitlis','Bolu','Burdur',
+  'Bursa','Çanakkale','Çankırı','Çorum','Denizli','Diyarbakır','Düzce','Edirne','Elazığ','Erzincan',
+  'Erzurum','Eskişehir','Gaziantep','Giresun','Gümüşhane','Hakkari','Hatay','Iğdır','Isparta','İstanbul',
+  'İzmir','Kahramanmaraş','Karabük','Karaman','Kars','Kastamonu','Kayseri','Kilis','Kırıkkale','Kırklareli',
+  'Kırşehir','Kocaeli','Konya','Kütahya','Malatya','Manisa','Mardin','Mersin','Muğla','Muş',
+  'Nevşehir','Niğde','Ordu','Osmaniye','Rize','Sakarya','Samsun','Şanlıurfa','Şırnak','Siirt',
+  'Sinop','Sivas','Tekirdağ','Tokat','Trabzon','Tunceli','Uşak','Van','Yalova','Yozgat','Zonguldak',
+]
+
 const SAYFA_BOYUTU = 20
 
 function tarihFmt(s: string) {
@@ -30,7 +41,7 @@ function bitisToInput(bitisTarihi: string) {
 }
 function fmt(v: number) { return v.toLocaleString('tr-TR', { minimumFractionDigits: 2 }) }
 
-type SortKey = 'baslangicTarihi'|'baslik'|'kurumAdi'|'gunlukFiyat'|'egitimTipi'|'masraf'
+type SortKey = 'baslangicTarihi'|'baslik'|'kurumAdi'|'gunlukFiyat'|'egitimTipi'|'masraf'|'sehir'
 
 export function HizliGiris() {
   const bugun = new Date()
@@ -40,7 +51,7 @@ export function HizliGiris() {
   const [hata, setHata]         = useState<string|null>(null)
 
   const [editId, setEditId]     = useState<number|null>(null)
-  const [form, setForm]         = useState({ baslik: '', baslangicTarihi: '', bitisTarihi: '', gunlukFiyat: '', etkinlikTuru: 'Egitim', egitimTipi: 'Online', masraf: '', kurumId: '' })
+  const [form, setForm]         = useState({ baslik: '', baslangicTarihi: '', bitisTarihi: '', gunlukFiyat: '', etkinlikTuru: 'Egitim', egitimTipi: 'Online', masraf: '', kurumId: '', sehir: '' })
   const [saving, setSaving]     = useState(false)
 
   const [sortKey, setSortKey]   = useState<SortKey>('baslangicTarihi')
@@ -83,6 +94,7 @@ export function HizliGiris() {
       else if (sortKey === 'gunlukFiyat')     { va = a.gunlukFiyat??0;  vb = b.gunlukFiyat??0 }
       else if (sortKey === 'egitimTipi')      { va = a.egitimTipi??'';  vb = b.egitimTipi??'' }
       else if (sortKey === 'masraf')          { va = a.masraf??0;        vb = b.masraf??0 }
+      else if (sortKey === 'sehir')           { va = a.sehir??'';        vb = b.sehir??'' }
       if (va < vb) return sortAsc ? -1 : 1
       if (va > vb) return sortAsc ?  1 : -1
       return 0
@@ -104,6 +116,7 @@ export function HizliGiris() {
       egitimTipi:      e.egitimTipi ?? 'Online',
       masraf:          String(e.masraf ?? ''),
       kurumId:         String(e.kurumId ?? ''),
+      sehir:           e.sehir ?? '',
     })
   }
 
@@ -122,6 +135,7 @@ export function HizliGiris() {
         egitimTipi:      form.etkinlikTuru === 'Toplanti' ? null : (form.egitimTipi || null),
         masraf:          (form.egitimTipi === 'Yuzyuze' && form.masraf) ? parseFloat(form.masraf) : null,
         kurumId:         form.kurumId ? parseInt(form.kurumId) : null,
+        sehir:           form.sehir.trim() || null,
       }
       await putEgitimEtkinligi(editId!, payload)
       const kurumAdi = kurumlar.find(k => k.id === payload.kurumId)?.ad ?? null
@@ -169,7 +183,7 @@ export function HizliGiris() {
         <>
           <div className="card">
             <div className="table-responsive">
-              <table className="table table-hover table-sm mb-0" style={{ fontSize: '0.82rem', minWidth: 900 }}>
+              <table className="table table-hover table-sm mb-0" style={{ fontSize: '0.82rem', minWidth: 980 }}>
                 <thead className="table-light">
                   <tr>
                     <th style={thStyle} onClick={() => setSort('baslangicTarihi')}>Tarih <SortIcon k="baslangicTarihi" /></th>
@@ -179,6 +193,7 @@ export function HizliGiris() {
                     <th style={thStyle} onClick={() => setSort('gunlukFiyat')} className="text-end">Tutar <SortIcon k="gunlukFiyat" /></th>
                     <th style={thStyle} onClick={() => setSort('egitimTipi')}>Tip <SortIcon k="egitimTipi" /></th>
                     <th style={thStyle} onClick={() => setSort('masraf')} className="text-end">Masraf <SortIcon k="masraf" /></th>
+                    <th style={thStyle} onClick={() => setSort('sehir')}>Şehir <SortIcon k="sehir" /></th>
                     <th style={{ width: 90 }}>İşlem</th>
                   </tr>
                   <tr>
@@ -202,12 +217,12 @@ export function HizliGiris() {
                         <option value="Toplanti">Toplantı</option>
                       </select>
                     </td>
-                    <td colSpan={2} />
+                    <td colSpan={3} />
                   </tr>
                 </thead>
                 <tbody>
                   {sayfalananlar.length === 0 && (
-                    <tr><td colSpan={8} className="text-center text-muted py-4">Kayıt bulunamadı.</td></tr>
+                    <tr><td colSpan={9} className="text-center text-muted py-4">Kayıt bulunamadı.</td></tr>
                   )}
                   {sayfalananlar.map(e => (
                     editId === e.id ? (
@@ -239,6 +254,18 @@ export function HizliGiris() {
                           {form.egitimTipi === 'Yuzyuze' &&
                             <input type="number" className="form-control form-control-sm text-end" value={form.masraf}
                               onChange={ev => setForm(f => ({ ...f, masraf: ev.target.value }))} />}
+                        </td>
+                        <td>
+                          <input
+                            className="form-control form-control-sm"
+                            list="turkiye-illeri-hg"
+                            placeholder="Şehir..."
+                            value={form.sehir}
+                            onChange={ev => setForm(f => ({ ...f, sehir: ev.target.value }))}
+                          />
+                          <datalist id="turkiye-illeri-hg">
+                            {TURKIYE_ILLERI.map(il => <option key={il} value={il} />)}
+                          </datalist>
                         </td>
                         <td>
                           <div className="d-flex gap-1">
@@ -274,6 +301,7 @@ export function HizliGiris() {
                             ? <span className="text-muted">{fmt(e.masraf)} ₺</span>
                             : '—'}
                         </td>
+                        <td className="text-muted">{e.sehir ?? '—'}</td>
                         <td>
                           <div className="d-flex gap-1">
                             <button className="btn btn-outline-primary btn-sm py-0 px-1"

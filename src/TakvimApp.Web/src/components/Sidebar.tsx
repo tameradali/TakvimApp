@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 
 interface SidebarProps {
@@ -38,9 +38,16 @@ function applyTheme(theme: 'dark' | 'light') {
 export function Sidebar({ open, onClose }: SidebarProps) {
   const { logout, isAdmin } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  const sidebarRef = useRef<HTMLElement>(null)
   const [dark, setDark] = useState<boolean>(getStoredTheme() === 'dark')
 
   useEffect(() => { applyTheme(getStoredTheme()) }, [])
+
+  // Sidebar açıldığında veya sayfa değişince en üste scroll
+  useEffect(() => {
+    if (sidebarRef.current) sidebarRef.current.scrollTop = 0
+  }, [open, location.pathname])
 
   function toggleDark() {
     const next = dark ? 'light' : 'dark'
@@ -64,6 +71,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
       )}
 
       <aside
+        ref={sidebarRef}
         id="layout-menu"
         className={`layout-menu menu-vertical menu bg-menu-theme${open ? ' show' : ''}`}
         style={{ position: 'fixed', top: 0, left: 0, height: '100vh', overflowY: 'auto', zIndex: 1045, width: 260 }}

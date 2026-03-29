@@ -37,6 +37,7 @@
 
 .content-wrapper .container-xxl {
   padding-top: 1.5rem !important;
+  max-width: 100% !important;
 }
 
 /* Sidebar mobilde hamburger butonunu her zaman göster */

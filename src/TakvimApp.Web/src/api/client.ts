@@ -60,6 +60,8 @@ export interface EgitimEtkinligi {
   masraf: number | null
   kurumId: number | null
   kurumAdi: string | null
+  sehir: string | null
+  arsivMi?: boolean
 }
 
 export interface BeklenenEgitim {
@@ -189,6 +191,7 @@ export async function patchEtkinlikBilgi(id: number, dto: {
   egitimTipi: string | null
   masraf: number | null
   kurumId: number | null
+  sehir: string | null
 }): Promise<void> {
   const r = await apiFetch(`/api/egitim-etkinlikleri/${id}/bilgi`, {
     method: 'PATCH', body: JSON.stringify(dto),
@@ -260,6 +263,7 @@ export interface KurumAyDetay {
   toplamGelir: number
   planlananGun: number
   planlananGelir: number
+  sehirler?: { sehir: string; gun: number }[]
 }
 
 export interface KurumYillikRapor {
@@ -355,6 +359,7 @@ export interface HizliGirisRow {
   egitimTipi: string | null
   masraf: number | null
   kurumId: number | null
+  sehir: string | null
 }
 
 export async function postEgitimEtkinligi(data: HizliGirisRow): Promise<{ id: number }> {
