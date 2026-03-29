@@ -427,11 +427,15 @@ export function Raporlar() {
                       {r.aylar.map(a => {
                         const g = a.gunSayisi
                         const p = planlananDahil ? (a.planlananGun ?? 0) : 0
-                        const sehirTooltip = a.sehirler && a.sehirler.length > 0
-                          ? a.sehirler.map(s => `${s.sehir}: ${s.gun}g`).join(', ')
+                        const sehirler = a.sehirler ?? []
+                        const sehirTooltip = sehirler.length > 0
+                          ? sehirler.map(s => `${s.sehir}: ${s.gun}g`).join(', ')
                           : undefined
+                        const sehirKisa = sehirler.length > 0
+                          ? sehirler.map(s => s.sehir.slice(0, 3)).join('/')
+                          : null
                         return (
-                          <td key={a.ay} className="text-center" style={{ verticalAlign: 'middle' }} title={sehirTooltip}>
+                          <td key={a.ay} className="text-center" style={{ verticalAlign: 'middle' }}>
                             {g > 0 || p > 0 ? (
                               <>
                                 <span className="d-block" style={{ lineHeight: 1.2 }}>
@@ -440,12 +444,20 @@ export function Raporlar() {
                                   {p > 0 && <span style={{ color: '#ffb300', fontWeight: 600 }}>{p}p</span>}
                                 </span>
                                 {(g > 0 || p > 0) && (
-                                <span className="d-block text-muted" style={{ fontSize: '0.67rem' }}>
-                                  {g > 0 && <span style={{ color: '#4caf50' }}>{fmt(a.toplamGelir)}₺</span>}
-                                  {g > 0 && p > 0 && <span className="text-muted"> </span>}
-                                  {p > 0 && <span style={{ color: '#ffb300' }}>{fmt(a.planlananGelir ?? 0)}₺</span>}
-                                </span>
-                              )}
+                                  <span className="d-block text-muted" style={{ fontSize: '0.67rem' }}>
+                                    {g > 0 && <span style={{ color: '#4caf50' }}>{fmt(a.toplamGelir)}₺</span>}
+                                    {g > 0 && p > 0 && <span className="text-muted"> </span>}
+                                    {p > 0 && <span style={{ color: '#ffb300' }}>{fmt(a.planlananGelir ?? 0)}₺</span>}
+                                  </span>
+                                )}
+                                {sehirKisa && (
+                                  <span
+                                    title={sehirTooltip}
+                                    style={{ fontSize: '0.58rem', color: '#8592a3', cursor: 'help', display: 'block', lineHeight: 1.1, marginTop: 1 }}
+                                  >
+                                    <i className="ri ri-map-pin-line" style={{ fontSize: '0.58rem' }} /> {sehirKisa}
+                                  </span>
+                                )}
                               </>
                             ) : <span className="text-muted">—</span>}
                           </td>
