@@ -409,6 +409,7 @@ export function Raporlar() {
                     <th className="text-end" style={{ minWidth: 105 }}>Gelir</th>
                     {planlananDahil && <th className="text-end" style={{ minWidth: 105, color: '#ffb300' }}>Plan.Gelir</th>}
                     {beklenenDahil  && <th className="text-end" style={{ minWidth: 105, color: '#f06292' }}>Bek.Gelir</th>}
+                    <th className="text-end" style={{ minWidth: 115, borderLeft: '2px solid #dee2e6' }}>Toplam</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -467,8 +468,11 @@ export function Raporlar() {
                       {planlananDahil && <td className="text-end fw-bold" style={{ color: '#ffb300' }}>{fmt(r.planlananToplamGun ?? 0)}</td>}
                       {beklenenDahil  && <td className="text-end fw-bold" style={{ color: '#f06292' }}>{fmt(r.beklenenToplamGun ?? 0)}</td>}
                       <td className="text-end fw-bold" style={{ color: '#696cff' }}>{fmtTl(r.toplamGelir)} ₺</td>
-                      {planlananDahil && <td className="text-end" style={{ color: '#ffb300' }}>{fmtTl(r.planlananToplamGelir ?? 0)} ₺</td>}
-                      {beklenenDahil  && <td className="text-end" style={{ color: '#f06292' }}>{fmtTl(r.beklenenToplamGelir ?? 0)} ₺</td>}
+                      {planlananDahil && <td className="text-end fw-bold" style={{ color: '#ffb300' }}>{fmtTl(r.planlananToplamGelir ?? 0)} ₺</td>}
+                      {beklenenDahil  && <td className="text-end fw-bold" style={{ color: '#f06292' }}>{fmtTl(r.beklenenToplamGelir ?? 0)} ₺</td>}
+                      <td className="text-end fw-bold" style={{ color: '#3d4a5c', borderLeft: '2px solid #dee2e6' }}>
+                        {fmtTl(r.toplamGelir + (planlananDahil ? (r.planlananToplamGelir ?? 0) : 0) + (beklenenDahil ? (r.beklenenToplamGelir ?? 0) : 0))} ₺
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -507,6 +511,9 @@ export function Raporlar() {
                     <td className="text-end" style={{ color: '#696cff' }}>{fmtTl(toplamGelir)} ₺</td>
                     {planlananDahil && <td className="text-end" style={{ color: '#ffb300' }}>{fmtTl(planlananToplamGelir)} ₺</td>}
                     {beklenenDahil  && <td className="text-end" style={{ color: '#f06292' }}>{fmtTl(beklenenToplamGelir)} ₺</td>}
+                    <td className="text-end" style={{ color: '#3d4a5c', borderLeft: '2px solid #dee2e6' }}>
+                      {fmtTl(toplamGelir + (planlananDahil ? planlananToplamGelir : 0) + (beklenenDahil ? beklenenToplamGelir : 0))} ₺
+                    </td>
                   </tr>
                 </tfoot>
               </table>
