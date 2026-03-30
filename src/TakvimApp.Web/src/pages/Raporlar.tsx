@@ -18,6 +18,7 @@ export function Raporlar() {
   const [hata, setHata]                     = useState<string | null>(null)
   const [planlananDahil, setPlanlananDahil] = useState(true)
   const [beklenenDahil, setBeklenenDahil]   = useState(true)
+  const [rakamGorsun, setRakamGorsun]       = useState(true)
 
   useEffect(() => {
     setLoading(true); setHata(null)
@@ -35,6 +36,21 @@ export function Raporlar() {
   const planlananToplamGelir   = raporlar.reduce((s, r) => s + (r.planlananToplamGelir ?? 0), 0)
   const beklenenToplamGun      = raporlar.reduce((s, r) => s + (r.beklenenToplamGun ?? 0), 0)
   const beklenenToplamGelir    = raporlar.reduce((s, r) => s + (r.beklenenToplamGelir ?? 0), 0)
+
+  // Toggle-aware toplamlar
+  const toggleTumGun   = toplamGun   + (planlananDahil ? planlananToplamGun   : 0) + (beklenenDahil ? beklenenToplamGun   : 0)
+  const toggleTumGelir = toplamGelir + (planlananDahil ? planlananToplamGelir : 0) + (beklenenDahil ? beklenenToplamGelir : 0)
+
+  // Ortalama adam gün = toplam gelir / toplam gün (toggle-aware)
+  const ortalamaAdamGun = toggleTumGun > 0 ? toggleTumGelir / toggleTumGun : 0
+
+  // En yüksek günlük gelir firması (gerçekleşen bazlı)
+  const enYuksekFirma = raporlar
+    .filter(r => r.toplamGun > 0 && r.toplamGelir > 0)
+    .reduce<KurumYillikRapor | null>((prev, r) => {
+      if (!prev) return r
+      return (r.toplamGelir / r.toplamGun) > (prev.toplamGelir / prev.toplamGun) ? r : prev
+    }, null)
 
   const gunPie = raporlar.map((r, i) => {
     const g = r.toplamGun
@@ -55,26 +71,51 @@ export function Raporlar() {
     const header = [
       'Kurum',
       ...AYLAR.map(a => `${a} Gün`),
-      'Toplam Gün',
-      ...(planlananDahil ? ['Planlanan Gün', 'Planlanan Gelir'] : []),
-      ...(beklenenDahil  ? ['Beklenen Gün', 'Beklenen Gelir'] : []),
-      'Toplam Gelir',
+      'Gün',
+      ...(planlananDahil ? ['Plan.Gün'] : []),
+      ...(beklenenDahil  ? ['Bek.Gün']  : []),
+      'Top.Gün',
+      ...(rakamGorsun ? [
+        'Gelir',
+        ...(planlananDahil ? ['Plan.Gelir'] : []),
+        ...(beklenenDahil  ? ['Bek.Gelir']  : []),
+        'Toplam Gelir',
+      ] : []),
     ]
-    const rows = raporlar.map(r => [
-      r.kurumAdi,
-      ...r.aylar.map(a => String(a.gunSayisi)),
-      String(r.toplamGun),
-      ...(planlananDahil ? [String(r.planlananToplamGun ?? 0), fmtTl(r.planlananToplamGelir ?? 0)] : []),
-      ...(beklenenDahil  ? [String(r.beklenenToplamGun ?? 0), fmtTl(r.beklenenToplamGelir ?? 0)] : []),
-      fmtTl(r.toplamGelir),
-    ])
+    const rows = raporlar.map(r => {
+      const topGun = r.toplamGun
+        + (planlananDahil ? (r.planlananToplamGun ?? 0) : 0)
+        + (beklenenDahil  ? (r.beklenenToplamGun  ?? 0) : 0)
+      return [
+        r.kurumAdi,
+        ...r.aylar.map(a => String(a.gunSayisi)),
+        String(r.toplamGun),
+        ...(planlananDahil ? [String(r.planlananToplamGun ?? 0)] : []),
+        ...(beklenenDahil  ? [String(r.beklenenToplamGun  ?? 0)] : []),
+        String(topGun),
+        ...(rakamGorsun ? [
+          fmtTl(r.toplamGelir),
+          ...(planlananDahil ? [fmtTl(r.planlananToplamGelir ?? 0)] : []),
+          ...(beklenenDahil  ? [fmtTl(r.beklenenToplamGelir  ?? 0)] : []),
+          fmtTl(r.toplamGelir
+            + (planlananDahil ? (r.planlananToplamGelir ?? 0) : 0)
+            + (beklenenDahil  ? (r.beklenenToplamGelir  ?? 0) : 0)),
+        ] : []),
+      ]
+    })
     const footer = [
       'Toplam',
       ...AYLAR.map((_, i) => String(raporlar.reduce((s, r) => s + (r.aylar[i]?.gunSayisi ?? 0), 0))),
       String(toplamGun),
-      ...(planlananDahil ? [String(planlananToplamGun), fmtTl(planlananToplamGelir)] : []),
-      ...(beklenenDahil  ? [String(beklenenToplamGun), fmtTl(beklenenToplamGelir)] : []),
-      fmtTl(toplamGelir),
+      ...(planlananDahil ? [String(planlananToplamGun)] : []),
+      ...(beklenenDahil  ? [String(beklenenToplamGun)]  : []),
+      String(toggleTumGun),
+      ...(rakamGorsun ? [
+        fmtTl(toplamGelir),
+        ...(planlananDahil ? [fmtTl(planlananToplamGelir)] : []),
+        ...(beklenenDahil  ? [fmtTl(beklenenToplamGelir)]  : []),
+        fmtTl(toggleTumGelir),
+      ] : []),
     ]
     const csv = [header, ...rows, footer]
       .map(row => row.map(c => `"${String(c).replace(/"/g, '""')}"`).join(','))
@@ -86,20 +127,37 @@ export function Raporlar() {
     URL.revokeObjectURL(url)
   }
 
-  // ── PDF export (yeni pencere + print) ───────────────────────────────────────
+  // ── PDF export ───────────────────────────────────────────────────────────────
   function exportPDF() {
-    const plH = planlananDahil ? '<th>Plan.Gün</th><th>Plan.Gelir</th>' : ''
-    const bkH = beklenenDahil  ? '<th>Beklenen Gün</th><th>Beklenen Gelir</th>' : ''
+    const plH    = planlananDahil ? '<th>Plan.Gün</th>' : ''
+    const bkH    = beklenenDahil  ? '<th>Bek.Gün</th>'  : ''
+    const gelirH = rakamGorsun
+      ? `<th>Gelir</th>${planlananDahil ? '<th>Plan.Gelir</th>' : ''}${beklenenDahil ? '<th>Bek.Gelir</th>' : ''}<th>Toplam Gelir</th>`
+      : ''
 
-    const tableRows = raporlar.map(r => `
+    const tableRows = raporlar.map(r => {
+      const topGun = r.toplamGun
+        + (planlananDahil ? (r.planlananToplamGun ?? 0) : 0)
+        + (beklenenDahil  ? (r.beklenenToplamGun  ?? 0) : 0)
+      const topGelir = r.toplamGelir
+        + (planlananDahil ? (r.planlananToplamGelir ?? 0) : 0)
+        + (beklenenDahil  ? (r.beklenenToplamGelir  ?? 0) : 0)
+      return `
       <tr>
         <td><b>${r.kurumAdi}</b></td>
         ${r.aylar.map(a => `<td>${a.gunSayisi > 0 ? a.gunSayisi + 'g' : '—'}</td>`).join('')}
         <td style="color:#4caf50"><b>${fmt(r.toplamGun)}</b></td>
-        ${planlananDahil ? `<td style="color:#ffb300"><b>${fmt(r.planlananToplamGun ?? 0)}</b></td><td style="color:#ffb300">${fmtTl(r.planlananToplamGelir ?? 0)} ₺</td>` : ''}
-        ${beklenenDahil  ? `<td style="color:#f06292"><b>${fmt(r.beklenenToplamGun ?? 0)}</b></td><td style="color:#f06292">${fmtTl(r.beklenenToplamGelir ?? 0)} ₺</td>` : ''}
-        <td style="color:#696cff"><b>${fmtTl(r.toplamGelir)} ₺</b></td>
-      </tr>`).join('')
+        ${planlananDahil ? `<td style="color:#ffb300"><b>${fmt(r.planlananToplamGun ?? 0)}</b></td>` : ''}
+        ${beklenenDahil  ? `<td style="color:#f06292"><b>${fmt(r.beklenenToplamGun ?? 0)}</b></td>`  : ''}
+        <td><b>${fmt(topGun)}</b></td>
+        ${rakamGorsun ? `
+          <td style="color:#696cff"><b>${fmtTl(r.toplamGelir)} ₺</b></td>
+          ${planlananDahil ? `<td style="color:#ffb300">${fmtTl(r.planlananToplamGelir ?? 0)} ₺</td>` : ''}
+          ${beklenenDahil  ? `<td style="color:#f06292">${fmtTl(r.beklenenToplamGelir  ?? 0)} ₺</td>` : ''}
+          <td><b>${fmtTl(topGelir)} ₺</b></td>
+        ` : ''}
+      </tr>`
+    }).join('')
 
     const html = `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Rapor ${yil}</title>
@@ -117,16 +175,22 @@ export function Raporlar() {
 <table>
   <thead><tr>
     <th>Kurum</th>${AYLAR.map(a => `<th>${a}</th>`).join('')}
-    <th>Top.Gün</th>${plH}${bkH}<th>Toplam Gelir</th>
+    <th>Gün</th>${plH}${bkH}<th>Top.Gün</th>${gelirH}
   </tr></thead>
   <tbody>${tableRows}</tbody>
   <tfoot><tr>
     <td>Toplam</td>
     ${AYLAR.map((_, i) => `<td>${raporlar.reduce((s, r) => s + (r.aylar[i]?.gunSayisi ?? 0), 0)}g</td>`).join('')}
     <td>${fmt(toplamGun)}</td>
-    ${planlananDahil ? `<td>${fmt(planlananToplamGun)}</td><td>${fmtTl(planlananToplamGelir)} ₺</td>` : ''}
-    ${beklenenDahil  ? `<td>${fmt(beklenenToplamGun)}</td><td>${fmtTl(beklenenToplamGelir)} ₺</td>` : ''}
-    <td>${fmtTl(toplamGelir)} ₺</td>
+    ${planlananDahil ? `<td>${fmt(planlananToplamGun)}</td>` : ''}
+    ${beklenenDahil  ? `<td>${fmt(beklenenToplamGun)}</td>`  : ''}
+    <td>${fmt(toggleTumGun)}</td>
+    ${rakamGorsun ? `
+      <td>${fmtTl(toplamGelir)} ₺</td>
+      ${planlananDahil ? `<td>${fmtTl(planlananToplamGelir)} ₺</td>` : ''}
+      ${beklenenDahil  ? `<td>${fmtTl(beklenenToplamGelir)} ₺</td>`  : ''}
+      <td>${fmtTl(toggleTumGelir)} ₺</td>
+    ` : ''}
   </tr></tfoot>
 </table>
 </body></html>`
@@ -179,6 +243,21 @@ export function Raporlar() {
             </div>
           </div>
 
+          {/* Rakam Görünsün toggle */}
+          <div className="d-flex gap-2 align-items-center border rounded px-2 py-1">
+            <span className="small" style={{ color: '#696cff', whiteSpace: 'nowrap' }}>₺ Rakam:</span>
+            <div className="form-check form-check-inline mb-0">
+              <input className="form-check-input" type="radio" id="rk-e" name="rakam"
+                checked={rakamGorsun} onChange={() => setRakamGorsun(true)} />
+              <label className="form-check-label small" htmlFor="rk-e">Evet</label>
+            </div>
+            <div className="form-check form-check-inline mb-0">
+              <input className="form-check-input" type="radio" id="rk-h" name="rakam"
+                checked={!rakamGorsun} onChange={() => setRakamGorsun(false)} />
+              <label className="form-check-label small" htmlFor="rk-h">Hayır</label>
+            </div>
+          </div>
+
           <select className="form-select form-select-sm" style={{ width: 100 }}
             value={yil} onChange={e => setYil(Number(e.target.value))}>
             {yillar.map(y => <option key={y} value={y}>{y}</option>)}
@@ -206,8 +285,8 @@ export function Raporlar() {
         </div>
       ) : (
         <>
-          {/* Özet kartlar */}
-          <div className="row g-3 mb-4">
+          {/* Özet kartlar — Satır 1 */}
+          <div className="row g-3 mb-3">
             <div className="col-sm-6 col-xl-3">
               <div className="card h-100"><div className="card-body">
                 <p className="text-muted small mb-1">Gerçekleşen Gün</p>
@@ -227,27 +306,30 @@ export function Raporlar() {
                 <div className="card h-100"><div className="card-body">
                   <p className="text-muted small mb-1">Beklenen Gün</p>
                   <h4 className="mb-0" style={{ color: '#f06292' }}>{fmt(beklenenToplamGun)} gün</h4>
-                  <small className="text-muted">{fmtTl(beklenenToplamGelir)} ₺ potansiyel</small>
+                  {rakamGorsun && <small className="text-muted">{fmtTl(beklenenToplamGelir)} ₺ potansiyel</small>}
                 </div></div>
               </div>
             )}
-            <div className="col-sm-6 col-xl-3">
-              <div className="card h-100"><div className="card-body">
-                <p className="text-muted small mb-1">Toplam Gelir ({yil})</p>
-                <h4 className="mb-0" style={{ color: '#696cff' }}>
-                  {fmtTl(toplamGelir + (planlananDahil ? planlananToplamGelir : 0) + (beklenenDahil ? beklenenToplamGelir : 0))} ₺
-                </h4>
-                <small className="text-muted">
-                  {fmtTl(toplamGelir)} ₺ gerçekleşen
-                  {planlananDahil && planlananToplamGelir > 0 && <> + {fmtTl(planlananToplamGelir)} ₺ plan</>}
-                  {beklenenDahil  && beklenenToplamGelir  > 0 && <> + {fmtTl(beklenenToplamGelir)}  ₺ bek</>}
-                </small>
-              </div></div>
-            </div>
+            {rakamGorsun && (
+              <div className="col-sm-6 col-xl-3">
+                <div className="card h-100"><div className="card-body">
+                  <p className="text-muted small mb-1">Toplam Gelir ({yil})</p>
+                  <h4 className="mb-0" style={{ color: '#696cff' }}>
+                    {fmtTl(toggleTumGelir)} ₺
+                  </h4>
+                  <small className="text-muted">
+                    {fmtTl(toplamGelir)} ₺ gerçekleşen
+                    {planlananDahil && planlananToplamGelir > 0 && <> + {fmtTl(planlananToplamGelir)} ₺ plan</>}
+                    {beklenenDahil  && beklenenToplamGelir  > 0 && <> + {fmtTl(beklenenToplamGelir)}  ₺ bek</>}
+                  </small>
+                </div></div>
+              </div>
+            )}
           </div>
 
-          {/* İkinci özet satır */}
+          {/* Özet kartlar — Satır 2 */}
           <div className="row g-3 mb-4">
+            {/* En Çok Gün */}
             {(() => {
               const best = raporlar.reduce<typeof raporlar[0] | null>((prev, r) => {
                 const g = r.toplamGun
@@ -272,11 +354,10 @@ export function Raporlar() {
                 </div>
               )
             })()}
-            {(() => {
-              const toplamTumGelir = toplamGelir
-                + (planlananDahil ? planlananToplamGelir : 0)
-                + (beklenenDahil  ? beklenenToplamGelir  : 0)
-              const aylikOrtalama = toplamTumGelir / 12
+
+            {/* Aylık Ort. Gelir */}
+            {rakamGorsun && (() => {
+              const aylikOrtalama = toggleTumGelir / 12
               return (
                 <div className="col-sm-6 col-xl-3">
                   <div className="card h-100"><div className="card-body">
@@ -287,11 +368,35 @@ export function Raporlar() {
                 </div>
               )
             })()}
+
+            {/* Ortalama Adam Gün */}
+            {rakamGorsun && toggleTumGun > 0 && (
+              <div className="col-sm-6 col-xl-3">
+                <div className="card h-100"><div className="card-body">
+                  <p className="text-muted small mb-1">Ort. Adam Gün</p>
+                  <h4 className="mb-0" style={{ color: '#00bcd4' }}>{fmtTl(ortalamaAdamGun)} ₺/gün</h4>
+                  <small className="text-muted">Toplam gelir / toplam gün</small>
+                </div></div>
+              </div>
+            )}
+
+            {/* En Yüksek Günlük Gelir Firması */}
+            {rakamGorsun && enYuksekFirma && (
+              <div className="col-sm-6 col-xl-3">
+                <div className="card h-100"><div className="card-body">
+                  <p className="text-muted small mb-1">En Yüksek Günlük Gelir</p>
+                  <h4 className="mb-0" style={{ color: '#ff7043' }}>
+                    {fmtTl(enYuksekFirma.toplamGelir / enYuksekFirma.toplamGun)} ₺/gün
+                  </h4>
+                  <small className="text-muted">{enYuksekFirma.kurumAdi}</small>
+                </div></div>
+              </div>
+            )}
           </div>
 
           {/* Pie charts */}
           <div className="row g-4 mb-4">
-            <div className="col-lg-6">
+            <div className={rakamGorsun ? 'col-lg-6' : 'col-12'}>
               <div className="card h-100">
                 <div className="card-header">
                   <h6 className="mb-0"><i className="ri ri-pie-chart-line me-1" />Kurum Bazlı Gün Dağılımı</h6>
@@ -311,26 +416,28 @@ export function Raporlar() {
                 </div>
               </div>
             </div>
-            <div className="col-lg-6">
-              <div className="card h-100">
-                <div className="card-header">
-                  <h6 className="mb-0"><i className="ri ri-pie-chart-2-line me-1" />Kurum Bazlı Gelir Dağılımı</h6>
-                </div>
-                <div className="card-body">
-                  <ResponsiveContainer width="100%" height={280}>
-                    <PieChart>
-                      <Pie data={gelirPie} dataKey="value" nameKey="name"
-                        cx="50%" cy="50%" outerRadius={100} innerRadius={45} paddingAngle={2}
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
-                        {gelirPie.map((e, i) => <Cell key={i} fill={e.fill} />)}
-                      </Pie>
-                      <Tooltip formatter={(v: number) => [`${fmtTl(v)} ₺`, 'Gelir']} />
-                      <Legend formatter={v => <span style={{ fontSize: '0.78rem' }}>{v}</span>} />
-                    </PieChart>
-                  </ResponsiveContainer>
+            {rakamGorsun && (
+              <div className="col-lg-6">
+                <div className="card h-100">
+                  <div className="card-header">
+                    <h6 className="mb-0"><i className="ri ri-pie-chart-2-line me-1" />Kurum Bazlı Gelir Dağılımı</h6>
+                  </div>
+                  <div className="card-body">
+                    <ResponsiveContainer width="100%" height={280}>
+                      <PieChart>
+                        <Pie data={gelirPie} dataKey="value" nameKey="name"
+                          cx="50%" cy="50%" outerRadius={100} innerRadius={45} paddingAngle={2}
+                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
+                          {gelirPie.map((e, i) => <Cell key={i} fill={e.fill} />)}
+                        </Pie>
+                        <Tooltip formatter={(v: number) => [`${fmtTl(v)} ₺`, 'Gelir']} />
+                        <Legend formatter={v => <span style={{ fontSize: '0.78rem' }}>{v}</span>} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Yıllık Beklenen Gün bölümü */}
@@ -346,8 +453,8 @@ export function Raporlar() {
                     <tr>
                       <th>Kurum</th>
                       <th className="text-end">Beklenen Gün</th>
-                      <th className="text-end">Ort. Günlük Fiyat</th>
-                      <th className="text-end">Potansiyel Gelir</th>
+                      {rakamGorsun && <th className="text-end">Ort. Günlük Fiyat</th>}
+                      {rakamGorsun && <th className="text-end">Potansiyel Gelir</th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -361,14 +468,18 @@ export function Raporlar() {
                         <td className="text-end" style={{ color: '#f06292' }}>
                           <strong>{fmt(r.beklenenToplamGun)} gün</strong>
                         </td>
-                        <td className="text-end text-muted small">
-                          {r.beklenenToplamGun > 0
-                            ? fmtTl((r.beklenenToplamGelir ?? 0) / r.beklenenToplamGun)
-                            : '—'} ₺/gün
-                        </td>
-                        <td className="text-end" style={{ color: '#696cff' }}>
-                          <strong>{fmtTl(r.beklenenToplamGelir ?? 0)} ₺</strong>
-                        </td>
+                        {rakamGorsun && (
+                          <td className="text-end text-muted small">
+                            {r.beklenenToplamGun > 0
+                              ? fmtTl((r.beklenenToplamGelir ?? 0) / r.beklenenToplamGun)
+                              : '—'} ₺/gün
+                          </td>
+                        )}
+                        {rakamGorsun && (
+                          <td className="text-end" style={{ color: '#696cff' }}>
+                            <strong>{fmtTl(r.beklenenToplamGelir ?? 0)} ₺</strong>
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -376,8 +487,8 @@ export function Raporlar() {
                     <tr className="table-light fw-bold">
                       <td>Toplam</td>
                       <td className="text-end" style={{ color: '#f06292' }}>{fmt(beklenenToplamGun)} gün</td>
-                      <td />
-                      <td className="text-end" style={{ color: '#696cff' }}>{fmtTl(beklenenToplamGelir)} ₺</td>
+                      {rakamGorsun && <td />}
+                      {rakamGorsun && <td className="text-end" style={{ color: '#696cff' }}>{fmtTl(beklenenToplamGelir)} ₺</td>}
                     </tr>
                   </tfoot>
                 </table>
@@ -399,17 +510,18 @@ export function Raporlar() {
                       <th key={a} className="text-center" style={{ minWidth: 66 }}>
                         <span className="d-block">{a}</span>
                         <span className="d-block text-muted fw-normal" style={{ fontSize: '0.6rem' }}>
-                          g{planlananDahil ? '+p' : ''} / ₺
+                          g{planlananDahil ? '+p' : ''} / {rakamGorsun ? '₺' : 'gün'}
                         </span>
                       </th>
                     ))}
-                    <th className="text-end" style={{ minWidth: 56 }}>Gün</th>
-                    {planlananDahil && <th className="text-end" style={{ minWidth: 56, color: '#ffb300' }}>Plan.</th>}
-                    {beklenenDahil  && <th className="text-end" style={{ minWidth: 56, color: '#f06292' }}>Bekl.</th>}
-                    <th className="text-end" style={{ minWidth: 105 }}>Gelir</th>
-                    {planlananDahil && <th className="text-end" style={{ minWidth: 105, color: '#ffb300' }}>Plan.Gelir</th>}
-                    {beklenenDahil  && <th className="text-end" style={{ minWidth: 105, color: '#f06292' }}>Bek.Gelir</th>}
-                    <th className="text-end" style={{ minWidth: 115, borderLeft: '2px solid #dee2e6' }}>Toplam</th>
+                    <th className="text-end" style={{ minWidth: 50 }}>Gün</th>
+                    {planlananDahil && <th className="text-end" style={{ minWidth: 50, color: '#ffb300' }}>Plan.</th>}
+                    {beklenenDahil  && <th className="text-end" style={{ minWidth: 50, color: '#f06292' }}>Bekl.</th>}
+                    <th className="text-end" style={{ minWidth: 60, borderLeft: '2px solid #dee2e6' }}>Top.Gün</th>
+                    {rakamGorsun && <th className="text-end" style={{ minWidth: 105, borderLeft: '2px solid #dee2e6' }}>Gelir</th>}
+                    {rakamGorsun && planlananDahil && <th className="text-end" style={{ minWidth: 105, color: '#ffb300' }}>Plan.Gelir</th>}
+                    {rakamGorsun && beklenenDahil  && <th className="text-end" style={{ minWidth: 105, color: '#f06292' }}>Bek.Gelir</th>}
+                    {rakamGorsun && <th className="text-end" style={{ minWidth: 115, borderLeft: '2px solid #dee2e6' }}>Toplam</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -418,63 +530,90 @@ export function Raporlar() {
                     (planlananDahil ? (r.planlananToplamGun ?? 0) > 0 : false) ||
                     (beklenenDahil  ? (r.beklenenToplamGun  ?? 0) > 0 : false) ||
                     r.toplamGelir > 0
-                  ).map((r, ri) => (
-                    <tr key={ri}>
-                      <td style={{ position: 'sticky', left: 0, background: 'var(--bs-body-bg,#fff)', zIndex: 1 }}>
-                        <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2,
-                          backgroundColor: getRenk(r, ri), marginRight: 6 }} />
-                        <strong>{r.kurumAdi}</strong>
-                      </td>
-                      {r.aylar.map(a => {
-                        const g = a.gunSayisi
-                        const p = planlananDahil ? (a.planlananGun ?? 0) : 0
-                        const sehirler = a.sehirler ?? []
-                        const sehirTooltip = sehirler.length > 0
-                          ? sehirler.map(s => `${s.sehir}: ${s.gun}g`).join(', ')
-                          : undefined
-                        const sehirKisa = sehirler.length > 0
-                          ? sehirler.map(s => s.sehir.slice(0, 3)).join('/')
-                          : null
-                        return (
-                          <td key={a.ay} className="text-center" style={{ verticalAlign: 'middle' }}>
-                            {g > 0 || p > 0 ? (
-                              <>
-                                <span className="d-block" style={{ lineHeight: 1.2 }}>
-                                  {g > 0 && <span style={{ color: '#4caf50', fontWeight: 600 }}>{g}g</span>}
-                                  {g > 0 && p > 0 && <span className="text-muted" style={{ fontSize: '0.6rem', margin: '0 1px' }}>+</span>}
-                                  {p > 0 && <span style={{ color: '#ffb300', fontWeight: 600 }}>{p}p</span>}
-                                </span>
-                                {(g > 0 || p > 0) && (
-                                  <span className="d-block text-muted" style={{ fontSize: '0.67rem' }}>
-                                    {g > 0 && <span style={{ color: '#4caf50' }}>{fmt(a.toplamGelir)}₺</span>}
-                                    {g > 0 && p > 0 && <span className="text-muted"> </span>}
-                                    {p > 0 && <span style={{ color: '#ffb300' }}>{fmt(a.planlananGelir ?? 0)}₺</span>}
+                  ).map((r, ri) => {
+                    const topGun = r.toplamGun
+                      + (planlananDahil ? (r.planlananToplamGun ?? 0) : 0)
+                      + (beklenenDahil  ? (r.beklenenToplamGun  ?? 0) : 0)
+                    const topGelir = r.toplamGelir
+                      + (planlananDahil ? (r.planlananToplamGelir ?? 0) : 0)
+                      + (beklenenDahil  ? (r.beklenenToplamGelir  ?? 0) : 0)
+                    return (
+                      <tr key={ri}>
+                        <td style={{ position: 'sticky', left: 0, background: 'var(--bs-body-bg,#fff)', zIndex: 1 }}>
+                          <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: 2,
+                            backgroundColor: getRenk(r, ri), marginRight: 6 }} />
+                          <strong>{r.kurumAdi}</strong>
+                        </td>
+                        {r.aylar.map(a => {
+                          const g  = a.gunSayisi
+                          const p  = planlananDahil ? (a.planlananGun ?? 0) : 0
+
+                          // Gerçekleşen şehirler
+                          const sehirler     = a.sehirler ?? []
+                          const sehirTooltip = sehirler.length > 0
+                            ? sehirler.map(s => `${s.sehir}: ${s.gun}g`).join(', ')
+                            : undefined
+                          const sehirKisa    = sehirler.length > 0
+                            ? sehirler.map(s => s.sehir.slice(0, 3)).join('/')
+                            : null
+
+                          // Planlanan şehirler
+                          const plSehirler     = planlananDahil ? (a.planlananSehirler ?? []) : []
+                          const plSehirTooltip = plSehirler.length > 0
+                            ? plSehirler.map(s => `${s.sehir}: ${s.gun}g`).join(', ')
+                            : undefined
+                          const plSehirKisa    = plSehirler.length > 0
+                            ? plSehirler.map(s => s.sehir.slice(0, 3)).join('/')
+                            : null
+
+                          return (
+                            <td key={a.ay} className="text-center" style={{ verticalAlign: 'middle' }}>
+                              {g > 0 || p > 0 ? (
+                                <>
+                                  <span className="d-block" style={{ lineHeight: 1.2 }}>
+                                    {g > 0 && <span style={{ color: '#4caf50', fontWeight: 600 }}>{g}g</span>}
+                                    {g > 0 && p > 0 && <span className="text-muted" style={{ fontSize: '0.6rem', margin: '0 1px' }}>+</span>}
+                                    {p > 0 && <span style={{ color: '#ffb300', fontWeight: 600 }}>{p}p</span>}
                                   </span>
-                                )}
-                                {sehirKisa && (
-                                  <span
-                                    title={sehirTooltip}
-                                    style={{ fontSize: '0.7rem', color: '#696cff', cursor: 'help', display: 'block', lineHeight: 1.3, marginTop: 2, fontWeight: 500 }}
-                                  >
-                                    <i className="ri ri-map-pin-line" /> {sehirKisa}
-                                  </span>
-                                )}
-                              </>
-                            ) : <span className="text-muted">—</span>}
-                          </td>
-                        )
-                      })}
-                      <td className="text-end fw-bold" style={{ color: '#4caf50' }}>{fmt(r.toplamGun)}</td>
-                      {planlananDahil && <td className="text-end fw-bold" style={{ color: '#ffb300' }}>{fmt(r.planlananToplamGun ?? 0)}</td>}
-                      {beklenenDahil  && <td className="text-end fw-bold" style={{ color: '#f06292' }}>{fmt(r.beklenenToplamGun ?? 0)}</td>}
-                      <td className="text-end fw-bold" style={{ color: '#696cff' }}>{fmtTl(r.toplamGelir)} ₺</td>
-                      {planlananDahil && <td className="text-end fw-bold" style={{ color: '#ffb300' }}>{fmtTl(r.planlananToplamGelir ?? 0)} ₺</td>}
-                      {beklenenDahil  && <td className="text-end fw-bold" style={{ color: '#f06292' }}>{fmtTl(r.beklenenToplamGelir ?? 0)} ₺</td>}
-                      <td className="text-end fw-bold" style={{ color: '#3d4a5c', borderLeft: '2px solid #dee2e6' }}>
-                        {fmtTl(r.toplamGelir + (planlananDahil ? (r.planlananToplamGelir ?? 0) : 0) + (beklenenDahil ? (r.beklenenToplamGelir ?? 0) : 0))} ₺
-                      </td>
-                    </tr>
-                  ))}
+                                  {rakamGorsun && (g > 0 || p > 0) && (
+                                    <span className="d-block text-muted" style={{ fontSize: '0.67rem' }}>
+                                      {g > 0 && <span style={{ color: '#4caf50' }}>{fmt(a.toplamGelir)}₺</span>}
+                                      {g > 0 && p > 0 && <span className="text-muted"> </span>}
+                                      {p > 0 && <span style={{ color: '#ffb300' }}>{fmt(a.planlananGelir ?? 0)}₺</span>}
+                                    </span>
+                                  )}
+                                  {sehirKisa && (
+                                    <span
+                                      title={sehirTooltip}
+                                      style={{ fontSize: '0.7rem', color: '#4caf50', cursor: 'help', display: 'block', lineHeight: 1.3, marginTop: 2, fontWeight: 500 }}
+                                    >
+                                      <i className="ri ri-map-pin-line" /> {sehirKisa}
+                                    </span>
+                                  )}
+                                  {plSehirKisa && (
+                                    <span
+                                      title={plSehirTooltip}
+                                      style={{ fontSize: '0.7rem', color: '#ffb300', cursor: 'help', display: 'block', lineHeight: 1.3, marginTop: 1, fontWeight: 500 }}
+                                    >
+                                      <i className="ri ri-map-pin-line" /> {plSehirKisa}
+                                    </span>
+                                  )}
+                                </>
+                              ) : <span className="text-muted">—</span>}
+                            </td>
+                          )
+                        })}
+                        <td className="text-end fw-bold" style={{ color: '#4caf50' }}>{fmt(r.toplamGun)}</td>
+                        {planlananDahil && <td className="text-end fw-bold" style={{ color: '#ffb300' }}>{fmt(r.planlananToplamGun ?? 0)}</td>}
+                        {beklenenDahil  && <td className="text-end fw-bold" style={{ color: '#f06292' }}>{fmt(r.beklenenToplamGun ?? 0)}</td>}
+                        <td className="text-end fw-bold" style={{ borderLeft: '2px solid #dee2e6' }}>{fmt(topGun)}</td>
+                        {rakamGorsun && <td className="text-end fw-bold" style={{ color: '#696cff', borderLeft: '2px solid #dee2e6' }}>{fmtTl(r.toplamGelir)} ₺</td>}
+                        {rakamGorsun && planlananDahil && <td className="text-end fw-bold" style={{ color: '#ffb300' }}>{fmtTl(r.planlananToplamGelir ?? 0)} ₺</td>}
+                        {rakamGorsun && beklenenDahil  && <td className="text-end fw-bold" style={{ color: '#f06292' }}>{fmtTl(r.beklenenToplamGelir ?? 0)} ₺</td>}
+                        {rakamGorsun && <td className="text-end fw-bold" style={{ color: '#3d4a5c', borderLeft: '2px solid #dee2e6' }}>{fmtTl(topGelir)} ₺</td>}
+                      </tr>
+                    )
+                  })}
                 </tbody>
                 <tfoot>
                   <tr className="table-light fw-bold">
@@ -493,7 +632,7 @@ export function Raporlar() {
                                 {g > 0 && p > 0 && <span className="text-muted" style={{ fontSize: '0.6rem', margin: '0 1px' }}>+</span>}
                                 {p > 0 && <span style={{ color: '#ffb300' }}>{p}p</span>}
                               </span>
-                              {(g > 0 || p > 0) && (
+                              {rakamGorsun && (g > 0 || p > 0) && (
                                 <span className="d-block text-muted" style={{ fontSize: '0.67rem' }}>
                                   {g > 0 && <span style={{ color: '#4caf50' }}>{fmt(t)}₺</span>}
                                   {g > 0 && p > 0 && ' '}
@@ -508,12 +647,11 @@ export function Raporlar() {
                     <td className="text-end" style={{ color: '#4caf50' }}>{fmt(toplamGun)}</td>
                     {planlananDahil && <td className="text-end" style={{ color: '#ffb300' }}>{fmt(planlananToplamGun)}</td>}
                     {beklenenDahil  && <td className="text-end" style={{ color: '#f06292' }}>{fmt(beklenenToplamGun)}</td>}
-                    <td className="text-end" style={{ color: '#696cff' }}>{fmtTl(toplamGelir)} ₺</td>
-                    {planlananDahil && <td className="text-end" style={{ color: '#ffb300' }}>{fmtTl(planlananToplamGelir)} ₺</td>}
-                    {beklenenDahil  && <td className="text-end" style={{ color: '#f06292' }}>{fmtTl(beklenenToplamGelir)} ₺</td>}
-                    <td className="text-end" style={{ color: '#3d4a5c', borderLeft: '2px solid #dee2e6' }}>
-                      {fmtTl(toplamGelir + (planlananDahil ? planlananToplamGelir : 0) + (beklenenDahil ? beklenenToplamGelir : 0))} ₺
-                    </td>
+                    <td className="text-end" style={{ borderLeft: '2px solid #dee2e6' }}>{fmt(toggleTumGun)}</td>
+                    {rakamGorsun && <td className="text-end" style={{ color: '#696cff', borderLeft: '2px solid #dee2e6' }}>{fmtTl(toplamGelir)} ₺</td>}
+                    {rakamGorsun && planlananDahil && <td className="text-end" style={{ color: '#ffb300' }}>{fmtTl(planlananToplamGelir)} ₺</td>}
+                    {rakamGorsun && beklenenDahil  && <td className="text-end" style={{ color: '#f06292' }}>{fmtTl(beklenenToplamGelir)} ₺</td>}
+                    {rakamGorsun && <td className="text-end" style={{ color: '#3d4a5c', borderLeft: '2px solid #dee2e6' }}>{fmtTl(toggleTumGelir)} ₺</td>}
                   </tr>
                 </tfoot>
               </table>

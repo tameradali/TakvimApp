@@ -4,7 +4,7 @@ import { Sidebar } from './Sidebar'
 import { Navbar } from './Navbar'
 
 export function Layout() {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 1200)
 
   function openMenu() {
     setSidebarOpen(true)
@@ -26,7 +26,7 @@ export function Layout() {
       <div className="layout-container">
         <Sidebar open={sidebarOpen} onClose={closeMenu} />
 
-        <div className="layout-page" style={{ minHeight: '100vh' }}>
+        <div className="layout-page" style={{ minHeight: '100vh', marginLeft: sidebarOpen ? 260 : 0, transition: 'margin-left 0.3s ease-in-out' }}>
           <Navbar onMenuToggle={toggleMenu} />
 
           <div className="content-wrapper">

@@ -116,6 +116,14 @@ public class GelirController(
                 var key = GetKey(e.KurumId);
                 EnsureData(dict, key, e.KurumId, e.KurumAdi, renkLookup);
                 dict[key].AyPlanlananGunler[ay - 1] += gun;
+
+                // Şehir takibi — planlanan eğitimler
+                if (!string.IsNullOrEmpty(e.Sehir))
+                {
+                    var plSehirDict = dict[key].AyPlanlananSehirler[ay - 1];
+                    plSehirDict.TryGetValue(e.Sehir!, out var mevcut3);
+                    plSehirDict[e.Sehir!] = mevcut3 + gun;
+                }
             }
 
             // Planlanan gelir — sadece fiyatlı eğitimler
@@ -162,7 +170,11 @@ public class GelirController(
                     toplamGelir    = d.AyGelirler[i],
                     planlananGun   = d.AyPlanlananGunler[i],
                     planlananGelir = d.AyPlanlananGelirler[i],
-                    sehirler       = d.AySehirler[i]
+                    sehirler           = d.AySehirler[i]
+                        .OrderByDescending(kv => kv.Value)
+                        .Select(kv => new { sehir = kv.Key, gun = kv.Value })
+                        .ToList(),
+                    planlananSehirler  = d.AyPlanlananSehirler[i]
                         .OrderByDescending(kv => kv.Value)
                         .Select(kv => new { sehir = kv.Key, gun = kv.Value })
                         .ToList(),
@@ -193,7 +205,8 @@ public class GelirController(
         public decimal[] AyGelirler          { get; } = new decimal[12];
         public int[]     AyPlanlananGunler   { get; } = new int[12];
         public decimal[] AyPlanlananGelirler { get; } = new decimal[12];
-        public Dictionary<string, int>[] AySehirler { get; } = Enumerable.Range(0, 12).Select(_ => new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)).ToArray();
+        public Dictionary<string, int>[] AySehirler          { get; } = Enumerable.Range(0, 12).Select(_ => new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)).ToArray();
+        public Dictionary<string, int>[] AyPlanlananSehirler { get; } = Enumerable.Range(0, 12).Select(_ => new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)).ToArray();
         public int       BeklenenGun         { get; set; }
         public decimal   BeklenenGelir       { get; set; }
         public int       ToplamGun           => AyGunler.Sum();

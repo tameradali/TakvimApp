@@ -22,7 +22,7 @@ export function Navbar({ onMenuToggle }: NavbarProps) {
     <nav className="layout-navbar navbar navbar-expand-xl align-items-center bg-navbar-theme">
       <div className="container-fluid px-4 d-flex align-items-center">
         <button
-          className="layout-menu-toggle d-xl-none btn me-2"
+          className="layout-menu-toggle btn me-2"
           style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '10px 12px', minWidth: 44, minHeight: 44 }}
           onClick={onMenuToggle}
         >

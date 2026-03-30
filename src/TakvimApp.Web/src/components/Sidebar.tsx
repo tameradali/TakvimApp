@@ -73,8 +73,12 @@ export function Sidebar({ open, onClose }: SidebarProps) {
       <aside
         ref={sidebarRef}
         id="layout-menu"
-        className={`layout-menu menu-vertical menu bg-menu-theme${open ? ' show' : ''}`}
-        style={{ position: 'fixed', top: 0, left: 0, height: '100vh', overflowY: 'auto', zIndex: 1045, width: 260 }}
+        className="layout-menu menu-vertical menu bg-menu-theme"
+        style={{
+          position: 'fixed', top: 0, left: 0, height: '100vh', overflowY: 'auto', zIndex: 1045, width: 260,
+          transform: open ? 'translateX(0)' : 'translateX(-260px)',
+          transition: 'transform 0.3s ease-in-out',
+        }}
       >
         {/* Brand */}
         <div className="app-brand demo">

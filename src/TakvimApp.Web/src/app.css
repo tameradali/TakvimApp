@@ -1,31 +1,15 @@
-/* Desktop: sidebar always visible, content shifted right */
-@media (min-width: 1200px) {
-  .layout-page {
-    margin-left: 260px !important;
-  }
-}
+/* Sidebar ve içerik geçişi — Layout.tsx tarafından inline style ile yönetilir */
 
-/* Mobile: sidebar is overlay, no margin */
-@media (max-width: 1199px) {
-  .layout-page {
-    margin-left: 0 !important;
-  }
-  /* Sidebar off-screen by default */
-  #layout-menu {
-    transform: translateX(-100%);
-    transition: transform 0.3s ease;
-  }
-  /* Show sidebar when open */
-  #layout-menu.show {
-    transform: translateX(0);
-  }
-  /* Overlay */
-  .layout-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.5);
-    z-index: 1040;
-  }
+/* Overlay — sidebar açıkken içeriğin üstünde */
+.layout-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 1040;
+}
+/* Masaüstünde overlay gösterme */
+@media (min-width: 1200px) {
+  .layout-overlay { display: none !important; }
 }
 
 /* Navbar ezme düzeltmesi — tüm sayfalarda içerik navbar'ın altından başlar */

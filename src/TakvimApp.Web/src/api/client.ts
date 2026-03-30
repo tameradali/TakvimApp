@@ -264,6 +264,7 @@ export interface KurumAyDetay {
   planlananGun: number
   planlananGelir: number
   sehirler?: { sehir: string; gun: number }[]
+  planlananSehirler?: { sehir: string; gun: number }[]
 }
 
 export interface KurumYillikRapor {
