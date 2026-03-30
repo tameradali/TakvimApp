@@ -66,10 +66,6 @@ export function Sidebar({ open, onClose }: SidebarProps) {
 
   return (
     <>
-      {open && (
-        <div className="layout-overlay layout-menu-toggle" onClick={onClose} />
-      )}
-
       <aside
         ref={sidebarRef}
         id="layout-menu"
@@ -106,7 +102,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
 
         <div className="menu-inner-shadow" />
 
-        <ul className="menu-inner py-1">
+        <ul className="menu-inner pt-3 pb-1">
           {visibleItems.map((item) => {
             const showGroup = !!(item.group && item.group !== lastGroup)
             if (item.group) lastGroup = item.group

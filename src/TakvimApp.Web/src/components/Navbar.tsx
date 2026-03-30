@@ -20,10 +20,10 @@ export function Navbar({ onMenuToggle }: NavbarProps) {
 
   return (
     <nav className="layout-navbar navbar navbar-expand-xl align-items-center bg-navbar-theme">
-      <div className="container-fluid px-4 d-flex align-items-center">
+      <div className="container-fluid ps-2 pe-4 d-flex align-items-center">
         <button
-          className="layout-menu-toggle btn me-2"
-          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '10px 12px', minWidth: 44, minHeight: 44 }}
+          className="layout-menu-toggle btn me-1"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '8px 10px', minWidth: 40, minHeight: 40 }}
           onClick={onMenuToggle}
         >
           <i className="ri ri-menu-line" style={{ fontSize: 24 }} />
