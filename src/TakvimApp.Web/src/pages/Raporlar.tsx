@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { getKurumBazliRapor } from '../api/client'
 import type { KurumYillikRapor } from '../api/client'
+import { TurkiyeHaritasi } from '../components/TurkiyeHaritasi'
 
 const AYLAR          = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara']
 const FALLBACK_RENK  = ['#696cff','#4caf50','#2196F3','#f06292','#00bcd4','#ff7043','#9c27b0','#607d8b','#8bc34a','#ff5722','#795548','#e91e63']
@@ -496,8 +497,11 @@ export function Raporlar() {
             </div>
           )}
 
+          {/* Türkiye Haritası */}
+          <TurkiyeHaritasi raporlar={raporlar} />
+
           {/* Pivot tablo */}
-          <div className="card">
+          <div className="card mt-4">
             <div className="card-header">
               <h6 className="mb-0"><i className="ri ri-table-line me-1" />Ay × Kurum Pivot — {yil}</h6>
             </div>
