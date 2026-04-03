@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { KurumYillikRapor } from '../api/client'
 
 // ── Projeksiyon (equirectangular) ─────────────────────────────────────────────
-const W = 900, H = 480
+const W = 860, H = 420
 const LON_MIN = 25.5, LON_MAX = 45.8
 const LAT_MAX = 42.5, LAT_MIN = 35.6
 
@@ -52,30 +52,46 @@ function centroid(g: Geometry): [number, number] {
 
 // ── Renk skalası ──────────────────────────────────────────────────────────────
 function gunRengi(gun: number, maxGun: number): string {
-  if (gun === 0) return '#e8f5e9'
-  const t = Math.pow(gun / maxGun, 0.6)
-  const l = Math.round(75 - t * 52)
-  return `hsl(122, 58%, ${l}%)`
+  if (gun === 0) return '#f1f8f1'
+  const t = Math.pow(gun / maxGun, 0.5) // sqrt skala: düşük değerlerde daha görünür
+  // açık yeşil (l=80) → koyu yeşil (l=22)
+  const l = Math.round(80 - t * 58)
+  return `hsl(125, 65%, ${l}%)`
 }
 function yazıRengi(gun: number, maxGun: number): string {
   return maxGun > 0 && gun / maxGun > 0.45 ? '#fff' : '#2e7d32'
 }
 
 // ── İsim normalleştirme ───────────────────────────────────────────────────────
+// ÖNEMLI: Önce Türkçe harfleri replace et, SONRA toLowerCase çağır.
+// JS'te 'İ'.toLowerCase() → 'i̇' (2 karakter: i + combining dot) olabilir,
+// bu yüzden önce replace yapmazsak eşleşme bozulur.
 function norm(s: string): string {
-  return s.toLowerCase()
-    .replace(/İ/g, 'i').replace(/ı/g, 'i').replace(/ğ/g, 'g')
-    .replace(/ü/g, 'u').replace(/ş/g, 's').replace(/ö/g, 'o')
-    .replace(/ç/g, 'c').replace(/â/g, 'a').trim()
+  return s
+    .replace(/İ/g, 'i').replace(/I/g, 'i')
+    .replace(/Ğ/g, 'g').replace(/Ü/g, 'u')
+    .replace(/Ş/g, 's').replace(/Ö/g, 'o').replace(/Ç/g, 'c')
+    .toLowerCase()
+    .replace(/ı/g, 'i').replace(/ğ/g, 'g').replace(/ü/g, 'u')
+    .replace(/ş/g, 's').replace(/ö/g, 'o').replace(/ç/g, 'c')
+    .replace(/â/g, 'a').trim()
 }
 
-// GADM NAME_1 → canonical form fixes
+// GADM NAME_1 → normalize → alias eşleşmeleri
 const GADM_ALIAS: Record<string, string> = {
-  'afyon karahisar': 'afyonkarahisar',
-  'k. maras':        'kahramanmaras',
-  'kahraman maras':  'kahramanmaras',
-  'sanli urfa':      'sanliurfa',
-  'igdir':           'igdir',
+  'afyon karahisar':  'afyonkarahisar',
+  'afyonkarahisar':   'afyonkarahisar',
+  'k. maras':         'kahramanmaras',
+  'kahraman maras':   'kahramanmaras',
+  'kahramanmaras':    'kahramanmaras',
+  'sanliurfa':        'sanliurfa',
+  'sanli urfa':       'sanliurfa',
+  'icel':             'mersin',
+  'istanbul':         'istanbul',
+  'izmir':            'izmir',
+  'igdir':            'igdir',
+  'mugla':            'mugla',
+  'usak':             'usak',
 }
 
 function matchSehir(gadmName: string, userNames: string[]): string | null {
@@ -211,17 +227,27 @@ export function TurkiyeHaritasi({ raporlar }: Props) {
                       filter="url(#provShadow)"
                     />
                     {label && (
-                      <text
-                        x={cx} y={cy}
-                        textAnchor="middle"
-                        dominantBaseline="middle"
-                        fontSize={11}
-                        fontWeight="700"
-                        fill={yazı}
-                        style={{ pointerEvents: 'none' }}
-                      >
-                        {label}
-                      </text>
+                      <>
+                        {/* Arka plan kutusu — küçük illerde okunabilirlik için */}
+                        <rect
+                          x={cx - 14} y={cy - 8}
+                          width={28} height={15}
+                          rx={3}
+                          fill={gun / maxGun > 0.45 ? 'rgba(0,0,0,0.25)' : 'rgba(255,255,255,0.55)'}
+                          style={{ pointerEvents: 'none' }}
+                        />
+                        <text
+                          x={cx} y={cy + 1}
+                          textAnchor="middle"
+                          dominantBaseline="middle"
+                          fontSize={10}
+                          fontWeight="700"
+                          fill={yazı}
+                          style={{ pointerEvents: 'none' }}
+                        >
+                          {label}
+                        </text>
+                      </>
                     )}
                   </g>
                 )
