@@ -497,9 +497,6 @@ export function Raporlar() {
             </div>
           )}
 
-          {/* Türkiye Haritası */}
-          <TurkiyeHaritasi raporlar={raporlar} />
-
           {/* Pivot tablo */}
           <div className="card mt-4">
             <div className="card-header">
@@ -661,6 +658,9 @@ export function Raporlar() {
               </table>
             </div>
           </div>
+
+          {/* Türkiye Eğitim Haritası — pivot tablonun altında */}
+          <TurkiyeHaritasi raporlar={raporlar} />
         </>
       )}
     </>
