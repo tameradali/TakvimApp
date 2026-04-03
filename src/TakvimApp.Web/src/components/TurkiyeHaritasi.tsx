@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { KurumYillikRapor } from '../api/client'
 
 // ── Projeksiyon (equirectangular) ─────────────────────────────────────────────
-const W = 860, H = 420
+const W = 720, H = 350
 const LON_MIN = 25.5, LON_MAX = 45.8
 const LAT_MAX = 42.5, LAT_MIN = 35.6
 
@@ -118,7 +118,7 @@ interface TooltipInfo {
 
 export function TurkiyeHaritasi({ raporlar }: Props) {
   const [geoJson, setGeoJson] = useState<GeoJSON | null>(null)
-  const [mod, setMod]         = useState<Mod>('gerceklesen')
+  const [mod, setMod]         = useState<Mod>('tumu')
   const [tooltip, setTooltip] = useState<TooltipInfo | null>(null)
 
   useEffect(() => {
@@ -157,19 +157,19 @@ export function TurkiyeHaritasi({ raporlar }: Props) {
 
   return (
     <div className="card mt-4">
-      <div className="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+      <div className="card-header d-flex align-items-center gap-3 flex-wrap">
         <h6 className="mb-0">
           <i className="ri ri-map-2-line me-1" />Türkiye Eğitim Haritası
         </h6>
         <div className="d-flex gap-1">
-          {(['gerceklesen', 'planlanan', 'tumu'] as Mod[]).map(m => (
+          {(['tumu', 'gerceklesen', 'planlanan'] as Mod[]).map(m => (
             <button
               key={m}
               className={`btn btn-sm ${mod === m ? 'btn-primary' : 'btn-outline-secondary'}`}
               style={{ fontSize: '0.78rem', padding: '3px 10px' }}
               onClick={() => setMod(m)}
             >
-              {m === 'gerceklesen' ? 'Gerçekleşen' : m === 'planlanan' ? 'Planlanan' : 'Tümü'}
+              {m === 'tumu' ? 'Tümü' : m === 'gerceklesen' ? 'Gerçekleşen' : 'Planlanan'}
             </button>
           ))}
         </div>
